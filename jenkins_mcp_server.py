@@ -28,7 +28,7 @@ print("-" * 50)
 # ------------------------------------
 
 if not JENKINS_TOKEN:
-    print("⚠️ WARNING: JENKINS_TOKEN not found. Tools requiring authentication will fail with 401.")
+    print("WARNING: JENKINS_TOKEN not found. Tools requiring authentication will fail with 401.")
 
 # ============================================================
 # JENKINS CLIENT (HTTPx Wrapper)
