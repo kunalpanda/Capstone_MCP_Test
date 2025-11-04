@@ -62,22 +62,17 @@ async def call_claude(messages: list, tools: list = None, system: str = None):
 # ======================================
 # Flattened MCP Tool Definitions
 # ======================================
+# Add to TOOLS list
 TOOLS = [
-    # ========== GITHUB TOOLS ==========
+    # ========== GITHUB TOOLS - READ ==========
     {
         "name": "get_repo_info",
         "description": "Get detailed metadata for a specific GitHub repository including stars, forks, description, and default branch.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "owner": {
-                    "type": "string",
-                    "description": "Repository owner (username or org name)"
-                },
-                "repo": {
-                    "type": "string",
-                    "description": "Repository name"
-                }
+                "owner": {"type": "string", "description": "Repository owner (username or org name)"},
+                "repo": {"type": "string", "description": "Repository name"}
             },
             "required": ["owner", "repo"]
         }
@@ -90,11 +85,7 @@ TOOLS = [
             "properties": {
                 "owner": {"type": "string", "description": "Repository owner"},
                 "repo": {"type": "string", "description": "Repository name"},
-                "ref": {
-                    "type": "string",
-                    "description": "Git reference (branch name, tag, or commit SHA). Default is 'main'",
-                    "default": "main"
-                }
+                "ref": {"type": "string", "description": "Git reference (branch name, tag, or commit SHA). Default is 'main'", "default": "main"}
             },
             "required": ["owner", "repo"]
         }
@@ -108,27 +99,57 @@ TOOLS = [
                 "owner": {"type": "string", "description": "Repository owner"},
                 "repo": {"type": "string", "description": "Repository name"},
                 "path": {"type": "string", "description": "File path within the repository (e.g., 'src/main.py')"},
-                "ref": {
-                    "type": "string",
-                    "description": "Git reference (branch, tag, or commit). Default is 'main'",
-                    "default": "main"
-                }
+                "ref": {"type": "string", "description": "Git reference (branch, tag, or commit). Default is 'main'", "default": "main"}
             },
             "required": ["owner", "repo", "path"]
         }
     },
+    
+    # ========== GITHUB TOOLS - WRITE ==========
     {
-        "name": "get_commit_diff",
-        "description": "Compare two commits or branches to see what files changed between them.",
+        "name": "create_branch",
+        "description": "Create a new branch from an existing branch.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "owner": {"type": "string", "description": "Repository owner"},
                 "repo": {"type": "string", "description": "Repository name"},
-                "base": {"type": "string", "description": "Base commit/branch (e.g., 'main')"},
-                "head": {"type": "string", "description": "Head commit/branch to compare (e.g., 'feature-branch')"}
+                "branch_name": {"type": "string", "description": "Name for the new branch"},
+                "from_branch": {"type": "string", "description": "Source branch to create from (default: main)", "default": "main"}
             },
-            "required": ["owner", "repo", "base", "head"]
+            "required": ["owner", "repo", "branch_name"]
+        }
+    },
+    {
+        "name": "create_or_update_file",
+        "description": "Create a new file or update an existing file in the repository.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string", "description": "Repository owner"},
+                "repo": {"type": "string", "description": "Repository name"},
+                "path": {"type": "string", "description": "File path (e.g., 'web/tests/new_test.py')"},
+                "content": {"type": "string", "description": "Complete file content"},
+                "message": {"type": "string", "description": "Commit message"},
+                "branch": {"type": "string", "description": "Branch name (default: main)", "default": "main"}
+            },
+            "required": ["owner", "repo", "path", "content", "message"]
+        }
+    },
+    {
+        "name": "create_pull_request",
+        "description": "Create a pull request to merge one branch into another.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "owner": {"type": "string", "description": "Repository owner"},
+                "repo": {"type": "string", "description": "Repository name"},
+                "title": {"type": "string", "description": "PR title"},
+                "body": {"type": "string", "description": "PR description"},
+                "head": {"type": "string", "description": "Source branch"},
+                "base": {"type": "string", "description": "Target branch (default: main)", "default": "main"}
+            },
+            "required": ["owner", "repo", "title", "body", "head"]
         }
     },
     
@@ -139,10 +160,45 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "job_name": {
-                    "type": "string",
-                    "description": "Name of the Jenkins job"
-                }
+                "job_name": {"type": "string", "description": "Name of the Jenkins job"}
+            },
+            "required": ["job_name"]
+        }
+    },
+    {
+        "name": "trigger_build",
+        "description": "Trigger a new Jenkins build for a job.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                "parameters": {"type": "object", "description": "Build parameters (optional)"}
+            },
+            "required": ["job_name"]
+        }
+    },
+    {
+        "name": "wait_for_build_completion",
+        "description": "Wait for a Jenkins build to complete and return its result.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                "build_number": {"type": "integer", "description": "Build number to wait for"},
+                "timeout_seconds": {"type": "integer", "description": "Max wait time (default: 600)", "default": 600},
+                "poll_interval": {"type": "integer", "description": "Seconds between polls (default: 10)", "default": 10}
+            },
+            "required": ["job_name", "build_number"]
+        }
+    },
+    {
+        "name": "get_test_results",
+        "description": "Get test results from a Jenkins build including failed tests details.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                "build_number": {"type": "integer", "description": "Build number (optional, uses lastBuild)"}
             },
             "required": ["job_name"]
         }
@@ -153,20 +209,13 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "job_name": {
-                    "type": "string",
-                    "description": "Name of the Jenkins job"
-                },
-                "build_number": {
-                    "type": "integer",
-                    "description": "Specific build number to retrieve logs for"
-                }
+                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                "build_number": {"type": "integer", "description": "Specific build number to retrieve logs for"}
             },
             "required": ["job_name", "build_number"]
         }
     }
 ]
-
 
 # ======================================
 # Tool Routing Helper

@@ -162,6 +162,137 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
             "truncated": truncated,
             "content": content
         }
+    
+# =========================================================
+# 8️⃣  create_branch  →  Create a new branch
+# =========================================================
+async def create_branch(owner: str, repo: str, branch_name: str, from_branch: str = "main"):
+    """
+    Create a new branch from an existing branch.
+    """
+    # First, get the SHA of the source branch
+    ref_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/ref/heads/{from_branch}"
+    async with httpx.AsyncClient() as client:
+        ref_res = await client.get(ref_url, headers=HEADERS)
+        if ref_res.status_code != 200:
+            raise RuntimeError(f"Failed to get source branch: {ref_res.status_code}: {ref_res.text}")
+        
+        source_sha = ref_res.json()["object"]["sha"]
+        
+        # Create the new branch
+        create_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/refs"
+        payload = {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": source_sha
+        }
+        
+        create_res = await client.post(create_url, headers=HEADERS, json=payload)
+        if create_res.status_code not in (200, 201):
+            raise RuntimeError(f"Failed to create branch: {create_res.status_code}: {create_res.text}")
+        
+        data = create_res.json()
+        return {
+            "branch_name": branch_name,
+            "from_branch": from_branch,
+            "sha": data["object"]["sha"],
+            "url": data["url"]
+        }
+
+
+# =========================================================
+# 9️⃣  create_or_update_file  →  Create or update a file
+# =========================================================
+async def create_or_update_file(
+    owner: str, 
+    repo: str, 
+    path: str, 
+    content: str, 
+    message: str, 
+    branch: str = "main"
+):
+    """
+    Create or update a file in the repository.
+    If the file exists, it will be updated; otherwise, it will be created.
+    """
+    # First, try to get the existing file to get its SHA
+    file_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}"
+    params = {"ref": branch}
+    
+    async with httpx.AsyncClient() as client:
+        get_res = await client.get(file_url, headers=HEADERS, params=params)
+        
+        # Prepare the payload
+        import base64
+        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        
+        payload = {
+            "message": message,
+            "content": encoded_content,
+            "branch": branch
+        }
+        
+        # If file exists, include its SHA for update
+        if get_res.status_code == 200:
+            existing_file = get_res.json()
+            payload["sha"] = existing_file["sha"]
+            operation = "updated"
+        else:
+            operation = "created"
+        
+        # Create or update the file
+        put_res = await client.put(file_url, headers=HEADERS, json=payload)
+        if put_res.status_code not in (200, 201):
+            raise RuntimeError(f"Failed to {operation} file: {put_res.status_code}: {put_res.text}")
+        
+        data = put_res.json()
+        return {
+            "operation": operation,
+            "path": path,
+            "branch": branch,
+            "commit_sha": data["commit"]["sha"],
+            "file_sha": data["content"]["sha"],
+            "url": data["content"]["html_url"]
+        }
+
+
+# =========================================================
+# 🔟  create_pull_request  →  Create a pull request
+# =========================================================
+async def create_pull_request(
+    owner: str,
+    repo: str,
+    title: str,
+    body: str,
+    head: str,
+    base: str = "main"
+):
+    """
+    Create a pull request from head branch to base branch.
+    """
+    url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls"
+    payload = {
+        "title": title,
+        "body": body,
+        "head": head,
+        "base": base
+    }
+    
+    async with httpx.AsyncClient() as client:
+        res = await client.post(url, headers=HEADERS, json=payload)
+        if res.status_code not in (200, 201):
+            raise RuntimeError(f"Failed to create PR: {res.status_code}: {res.text}")
+        
+        pr = res.json()
+        return {
+            "number": pr["number"],
+            "title": pr["title"],
+            "state": pr["state"],
+            "head_branch": pr["head"]["ref"],
+            "base_branch": pr["base"]["ref"],
+            "author": pr["user"]["login"],
+            "url": pr["html_url"],
+            "created_at": pr["created_at"]
+        }
 
 # =========================================================
 # MCP tool list
@@ -176,5 +307,8 @@ async def list_tools():
             {"name": "get_file_tree", "description": "List files in a branch recursively"},
             {"name": "get_commit_diff", "description": "Compare two commits/branches"},
             {"name": "get_file_content", "description": "Retrieve and decode file content"},
+            {"name": "create_branch", "description": "Create a new branch from an existing branch"},
+            {"name": "create_or_update_file", "description": "Create or update a file in the repository"},
+            {"name": "create_pull_request", "description": "Create a pull request"},
         ]
     }
