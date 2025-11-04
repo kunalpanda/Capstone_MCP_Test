@@ -1,0 +1,3 @@
+uvicorn mcp_servers.github_server.server:app --port 8010
+uvicorn mcp_servers.jenkins_server.server:app --port 8020
+python -m orchestrator.orchestrator

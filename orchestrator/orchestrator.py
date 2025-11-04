@@ -4,6 +4,8 @@ import json
 import os
 import httpx
 from string import Template
+import time
+from typing import Optional
 
 from orchestrator.mcp_client import call_mcp_tool
 from orchestrator.config import settings
@@ -15,7 +17,7 @@ from orchestrator.state import WorkflowState
 # ======================================
 ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
-PROMPT_FILE = "prompts/test_run.txt"
+PROMPT_FILE = "prompts/func_test.txt"
 
 state = WorkflowState()
 
@@ -23,8 +25,8 @@ state = WorkflowState()
 # ======================================
 # Claude 4.5 Tool-Use Function
 # ======================================
-async def call_claude(messages: list, tools: list = None, system: str = None):
-    """Send messages to Claude 4.5 with native tool-use support."""
+async def call_claude(messages: list, tools: list = None, system: str = None, max_retries: int = 3):
+    """Send messages to Claude 4.5 with native tool-use support and rate limit handling."""
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
@@ -43,21 +45,107 @@ async def call_claude(messages: list, tools: list = None, system: str = None):
     if tools:
         payload["tools"] = tools
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        res = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            json=payload,
-            headers=headers
-        )
-        
-        if res.status_code != 200:
-            print("❌ Claude API request failed.")
-            print("Status code:", res.status_code)
-            print("Response:", res.text)
-            res.raise_for_status()
-            
-        return res.json()
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                res = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    json=payload,
+                    headers=headers
+                )
+                
+                # Check for rate limit
+                if res.status_code == 429:
+                    retry_after = int(res.headers.get("retry-after", 60))
+                    print(f"⚠️  Rate limit hit. Waiting {retry_after} seconds before retry {attempt + 1}/{max_retries}...")
+                    
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(retry_after)
+                        continue
+                    else:
+                        print("❌ Max retries reached. Consider reducing message history.")
+                        raise Exception("Rate limit exceeded after retries")
+                
+                if res.status_code != 200:
+                    print("❌ Claude API request failed.")
+                    print("Status code:", res.status_code)
+                    print("Response:", res.text)
+                    res.raise_for_status()
+                    
+                return res.json()
+                
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code != 429 or attempt == max_retries - 1:
+                raise
 
+async def summarize_old_messages(messages: list, keep_recent: int = 4) -> list:
+    """
+    Summarize older messages to reduce token count.
+    Keeps the most recent N exchanges and summarizes the rest.
+    """
+    if len(messages) <= keep_recent + 2:  # +2 for initial user message and first response
+        return messages
+    
+    # Split messages into old and recent
+    initial_message = messages[0]  # Keep the very first message
+    old_messages = messages[1:-(keep_recent * 2)]  # Messages to summarize
+    recent_messages = messages[-(keep_recent * 2):]  # Keep last N exchanges
+    
+    # Create summary of old messages
+    summary_parts = []
+    for i, msg in enumerate(old_messages):
+        role = msg["role"]
+        content = msg["content"]
+        
+        if isinstance(content, str):
+            summary_parts.append(f"{role}: {content[:200]}...")
+        elif isinstance(content, list):
+            # Handle tool results
+            for block in content:
+                if isinstance(block, dict):
+                    if block.get("type") == "text":
+                        summary_parts.append(f"{role}: {block['text'][:100]}...")
+                    elif block.get("type") == "tool_result":
+                        summary_parts.append(f"{role}: Tool result for {block.get('tool_use_id', 'unknown')}")
+    
+    # Create summarized message
+    summary_message = {
+        "role": "user",
+        "content": f"[SUMMARY OF PREVIOUS INTERACTIONS]\n\n" + "\n".join(summary_parts[:10])
+    }
+    
+    return [initial_message, summary_message] + recent_messages
+
+def truncate_tool_results(messages: list, max_result_length: int = 3000) -> list:
+    """
+    Truncate large tool results to prevent token overflow.
+    """
+    truncated_messages = []
+    
+    for msg in messages:
+        if msg["role"] == "user" and isinstance(msg["content"], list):
+            # Process tool results
+            truncated_content = []
+            for block in msg["content"]:
+                if isinstance(block, dict) and block.get("type") == "tool_result":
+                    content = block.get("content", "")
+                    if isinstance(content, str) and len(content) > max_result_length:
+                        truncated_block = block.copy()
+                        truncated_block["content"] = content[:max_result_length] + "\n\n[... truncated for length]"
+                        truncated_content.append(truncated_block)
+                    else:
+                        truncated_content.append(block)
+                else:
+                    truncated_content.append(block)
+            
+            truncated_messages.append({
+                "role": msg["role"],
+                "content": truncated_content
+            })
+        else:
+            truncated_messages.append(msg)
+    
+    return truncated_messages
 
 # ======================================
 # Flattened MCP Tool Definitions
@@ -239,6 +327,7 @@ def get_server_for_tool(tool_name: str) -> str:
 async def run_conversation_with_tools(initial_prompt: str, max_iterations: int = 5):
     """
     Run a multi-turn conversation with Claude, executing tools as requested.
+    Now with message management to avoid rate limits.
     """
     # Initial message
     messages = [
@@ -251,7 +340,8 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
     system_prompt = (
         "You are an autonomous agent for software test analysis and improvement. "
         "Use the provided tools to explore repositories and analyze CI/CD pipelines. "
-        "Always use exact tool names and required parameters."
+        "Always use exact tool names and required parameters. "
+        "Be concise in your analysis to conserve tokens."
     )
     
     iteration = 0
@@ -262,9 +352,23 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
         print(f"ITERATION {iteration}")
         print(f"{'='*60}")
         
-        # Call Claude
+        # Truncate large tool results BEFORE sending
+        messages = truncate_tool_results(messages)
+        
+        # Summarize old messages if conversation is getting long
+        if len(messages) > 10:
+            print(f"📊 Message count: {len(messages)} - Summarizing old messages...")
+            messages = await summarize_old_messages(messages, keep_recent=3)
+            print(f"📊 After summarization: {len(messages)} messages")
+        
+        # Call Claude with retry logic
         print(f"🤖 Calling Claude (iteration {iteration})...")
-        response = await call_claude(messages, tools=TOOLS, system=system_prompt)
+        try:
+            response = await call_claude(messages, tools=TOOLS, system=system_prompt)
+        except Exception as e:
+            print(f"❌ Failed to call Claude: {e}")
+            print(f"💡 Consider reducing max_iterations or message history length")
+            break
         
         # Add Claude's response to message history
         assistant_message = {
@@ -280,7 +384,12 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
         # Display text content
         for block in response["content"]:
             if block["type"] == "text":
-                print(f"\n💬 Claude says:\n{block['text']}\n")
+                text = block["text"]
+                # Truncate long text for display
+                if len(text) > 500:
+                    print(f"\n💬 Claude says:\n{text[:500]}...\n[truncated]\n")
+                else:
+                    print(f"\n💬 Claude says:\n{text}\n")
         
         # If no tool use, we're done
         if stop_reason == "end_turn":
@@ -298,7 +407,7 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                     tool_use_id = block["id"]
                     
                     print(f"\n⚙️  Tool requested: {tool_name}")
-                    print(f"📦 Input: {json.dumps(tool_input, indent=2)}")
+                    print(f"📦 Input: {json.dumps(tool_input, indent=2)[:200]}...")
                     
                     try:
                         # Route to appropriate MCP server
@@ -315,7 +424,13 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                         # Extract result from JSON-RPC response
                         if "result" in mcp_response:
                             result = mcp_response["result"]
-                            print(f"✅ Success: {json.dumps(result, indent=2)[:300]}...")
+                            result_str = json.dumps(result)
+                            
+                            # Log truncated result
+                            if len(result_str) > 300:
+                                print(f"✅ Success: {result_str[:300]}... [truncated]")
+                            else:
+                                print(f"✅ Success: {result_str}")
                         elif "error" in mcp_response:
                             result = {"error": mcp_response["error"]}
                             print(f"❌ Error: {result}")
@@ -350,10 +465,10 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
     
     print(f"\n{'='*60}")
     print(f"Completed after {iteration} iterations")
+    print(f"📊 Final message count: {len(messages)}")
     print(f"{'='*60}")
     
     return messages
-
 
 # ======================================
 # Main Orchestrator Execution Flow
