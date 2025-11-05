@@ -6,6 +6,25 @@ from .config import GITHUB_TOKEN, GITHUB_API_URL
 # Shared HTTP headers
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"}
 
+# === Branch enforcement helper (add below imports) ===
+def enforce_branch(kwargs: dict) -> dict:
+    """
+    Ensures every call includes a valid 'branch' or 'ref' value.
+    Defaults to ACTIVE_BRANCH environment variable or 'main'.
+    """
+    import os
+    active_branch = os.getenv("ACTIVE_BRANCH", "main")
+
+    # Fill in missing branch/ref fields
+    if "branch" in kwargs and not kwargs["branch"]:
+        kwargs["branch"] = active_branch
+    if "ref" in kwargs and not kwargs["ref"]:
+        kwargs["ref"] = active_branch
+    if "from_branch" in kwargs and not kwargs["from_branch"]:
+        kwargs["from_branch"] = active_branch
+    return kwargs
+
+
 
 # =========================================================
 # 1️⃣  list_user_repos  →  List all repos for a user/org
@@ -97,6 +116,7 @@ async def get_pr_diff(owner: str, repo: str, pr_number: int):
 # 5️⃣  get_file_tree  →  Recursively list files in a branch
 # =========================================================
 async def get_file_tree(owner: str, repo: str, ref: str = "main"):
+    kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/trees/{ref}?recursive=1"
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
@@ -137,6 +157,7 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
     """
     Returns the decoded source code for a given file path and branch/ref.
     """
+    kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}?ref={ref}"
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
@@ -170,6 +191,7 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
     """
     Create a new branch from an existing branch.
     """
+    kwargs = enforce_branch(locals())
     # First, get the SHA of the source branch
     ref_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/ref/heads/{from_branch}"
     async with httpx.AsyncClient() as client:
@@ -214,6 +236,7 @@ async def create_or_update_file(
     Create or update a file in the repository.
     If the file exists, it will be updated; otherwise, it will be created.
     """
+    kwargs = enforce_branch(locals())
     # First, try to get the existing file to get its SHA
     file_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}"
     params = {"ref": branch}
@@ -269,6 +292,7 @@ async def create_pull_request(
     """
     Create a pull request from head branch to base branch.
     """
+    kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls"
     payload = {
         "title": title,

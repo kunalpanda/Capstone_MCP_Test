@@ -1,24 +1,64 @@
 # mcp_servers/jenkins_server/tools.py
 import httpx
 from .config import JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
+import asyncio 
 
 # Jenkins requires basic authentication
 AUTH = (JENKINS_USER, JENKINS_TOKEN)
+
+# === Helper: enforce branch parameter for all builds ===
+def enforce_branch_param(parameters: dict | None) -> dict:
+    """
+    Ensures every Jenkins build has a BRANCH parameter.
+    Pulls from ACTIVE_BRANCH environment variable or defaults to 'main'.
+    """
+    import os
+    active_branch = os.getenv("ACTIVE_BRANCH", "main")
+    parameters = parameters or {}
+    parameters.setdefault("BRANCH", active_branch)
+    return parameters
 
 
 # =========================================================
 # 1️⃣ trigger_build → Start a Jenkins job
 # =========================================================
 async def trigger_build(job_name: str, parameters: dict = None):
-    """Triggers a Jenkins job with optional parameters."""
-    url = f"{JENKINS_URL}/job/{job_name}/build"
-    if parameters:
-        url += "WithParameters"
+    """
+    Trigger a Jenkins job, ensuring BRANCH parameter and proper endpoint usage.
+    """
+    # ✅ Always enforce branch
+    parameters = enforce_branch_param(parameters)
+
+    url = f"{JENKINS_URL}/job/{job_name}/buildWithParameters"
+
     async with httpx.AsyncClient(auth=AUTH) as client:
-        res = await client.post(url, params=parameters or {})
+        res = await client.post(url, params=parameters)
         if res.status_code not in (200, 201, 202):
             raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
-    return {"status": "triggered", "job": job_name}
+
+        queue_url = res.headers.get("Location")
+        build_number = None
+
+        # Poll the queue for assigned build number
+        if queue_url:
+            for _ in range(20):  # up to ~10s
+                qres = await client.get(f"{queue_url}api/json")
+                if qres.status_code == 200:
+                    qdata = qres.json()
+                    if "executable" in qdata and qdata["executable"]:
+                        build_number = qdata["executable"]["number"]
+                        break
+                await asyncio.sleep(0.5)
+
+    return {
+        "status": "triggered",
+        "job": job_name,
+        "parameters": parameters,
+        "queue_url": queue_url,
+        "build_number": build_number,
+    }
+
+
 
 
 # =========================================================
@@ -70,57 +110,72 @@ import asyncio
 from typing import Optional
 
 # =========================================================
-# 5️⃣ wait_for_build_completion → Poll until build finishes
+# wait_for_build_completion → Poll Jenkins until a build finishes
 # =========================================================
 async def wait_for_build_completion(
     job_name: str,
     build_number: int,
     timeout_seconds: int = 600,
-    poll_interval: int = 10
+    poll_interval: int = 10,
+    max_retries: int = 10,
 ):
     """
-    Wait for a Jenkins build to complete by polling its status.
-    Returns the final build result or times out.
+    Waits for a Jenkins build to complete.
+    Retries up to `max_retries` times on HTTP 404 (build not yet created).
     """
+    import asyncio, time
+    start = time.time()
     url = f"{JENKINS_URL}/job/{job_name}/{build_number}/api/json"
-    start_time = asyncio.get_event_loop().time()
-    
+
     async with httpx.AsyncClient(auth=AUTH) as client:
+        retries = 0
         while True:
-            # Check timeout
-            elapsed = asyncio.get_event_loop().time() - start_time
-            if elapsed > timeout_seconds:
-                return {
-                    "status": "timeout",
-                    "job_name": job_name,
-                    "build_number": build_number,
-                    "elapsed_seconds": int(elapsed),
-                    "message": f"Build did not complete within {timeout_seconds} seconds"
-                }
-            
-            # Poll build status
-            res = await client.get(url)
-            if res.status_code != 200:
-                raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
-            
-            data = res.json()
-            building = data.get("building", False)
-            result = data.get("result")
-            
-            # If build is complete
-            if not building and result:
+            try:
+                res = await client.get(url)
+                # Handle 404: build not yet available
+                if res.status_code == 404:
+                    retries += 1
+                    if retries > max_retries:
+                        raise RuntimeError(
+                            f"Build #{build_number} not found after {max_retries} retries."
+                        )
+                    print(f"⚠️ Build #{build_number} not yet created (404). Retry {retries}/{max_retries} in {poll_interval}s...")
+                    await asyncio.sleep(poll_interval)
+                    continue
+
+                if res.status_code != 200:
+                    raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
+
+                data = res.json()
+                if data.get("building", False):
+                    elapsed = int(time.time() - start)
+                    print(f"⏳ Build #{build_number} still running... ({elapsed}s elapsed)")
+                    await asyncio.sleep(poll_interval)
+                    if elapsed > timeout_seconds:
+                        raise TimeoutError(f"Timed out after {timeout_seconds}s waiting for build #{build_number}")
+                    continue
+
+                # Completed successfully or failed
+                result = data.get("result", "UNKNOWN")
+                duration = data.get("duration", 0)
+                elapsed = int(time.time() - start)
+                print(f"✅ Build #{build_number} finished with status: {result}")
                 return {
                     "status": "completed",
                     "job_name": job_name,
                     "build_number": build_number,
                     "result": result,
-                    "duration": data.get("duration"),
-                    "elapsed_seconds": int(elapsed),
-                    "url": data.get("url")
+                    "duration": duration,
+                    "elapsed_seconds": elapsed,
+                    "url": f"{JENKINS_URL}/job/{job_name}/{build_number}/",
                 }
-            
-            # Wait before next poll
-            await asyncio.sleep(poll_interval)
+
+            except httpx.RequestError as e:
+                retries += 1
+                if retries > max_retries:
+                    raise RuntimeError(f"Failed after {max_retries} retries: {str(e)}")
+                print(f"⚠️ Request error: {e}. Retry {retries}/{max_retries} in {poll_interval}s...")
+                await asyncio.sleep(poll_interval)
 
 
 # =========================================================

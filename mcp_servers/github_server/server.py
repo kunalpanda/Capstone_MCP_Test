@@ -49,4 +49,6 @@ async def handle_rpc(request: Request):
 
 @app.get("/")
 async def root():
-    return {"message": "GitHub MCP JSON-RPC Server running"}
+    import os
+    branch = os.getenv("ACTIVE_BRANCH", "main")
+    return {"message": f"GitHub MCP JSON-RPC Server running (active branch: {branch})"}

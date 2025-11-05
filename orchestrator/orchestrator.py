@@ -10,6 +10,7 @@ from typing import Optional
 from orchestrator.mcp_client import call_mcp_tool
 from orchestrator.config import settings
 from orchestrator.state import WorkflowState
+from orchestrator.jenkins_utils import summarize_jenkins_console, format_jenkins_summary
 
 
 # ======================================
@@ -78,40 +79,46 @@ async def call_claude(messages: list, tools: list = None, system: str = None, ma
             if e.response.status_code != 429 or attempt == max_retries - 1:
                 raise
 
-async def summarize_old_messages(messages: list, keep_recent: int = 4) -> list:
-    """
-    Summarize older messages to reduce token count.
-    Keeps the most recent N exchanges and summarizes the rest.
-    """
-    if len(messages) <= keep_recent + 2:  # +2 for initial user message and first response
+async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list:  # Increased from 3
+    """Keep more recent context and include tool results in summary"""
+    if len(messages) <= keep_recent + 2:
         return messages
     
-    # Split messages into old and recent
-    initial_message = messages[0]  # Keep the very first message
-    old_messages = messages[1:-(keep_recent * 2)]  # Messages to summarize
-    recent_messages = messages[-(keep_recent * 2):]  # Keep last N exchanges
+    # Keep initial message + last 6 exchanges (12 messages)
+    initial_message = messages[0]
+    old_messages = messages[1:-(keep_recent * 2)]
+    recent_messages = messages[-(keep_recent * 2):]
     
-    # Create summary of old messages
+    # Create DETAILED summary including tool results
     summary_parts = []
-    for i, msg in enumerate(old_messages):
-        role = msg["role"]
+    current_branch = None
+    files_modified = []
+    
+    for msg in old_messages:
         content = msg["content"]
         
-        if isinstance(content, str):
-            summary_parts.append(f"{role}: {content[:200]}...")
-        elif isinstance(content, list):
-            # Handle tool results
+        # Extract key information
+        if isinstance(content, list):
             for block in content:
                 if isinstance(block, dict):
-                    if block.get("type") == "text":
-                        summary_parts.append(f"{role}: {block['text'][:100]}...")
-                    elif block.get("type") == "tool_result":
-                        summary_parts.append(f"{role}: Tool result for {block.get('tool_use_id', 'unknown')}")
+                    if block.get("type") == "tool_result":
+                        result_content = block.get("content", "")
+                        # Parse for branch names, file paths
+                        if "branch_name" in result_content:
+                            # Extract branch
+                            pass
+                        if "path" in result_content and "operation" in result_content:
+                            # Track files modified
+                            pass
     
-    # Create summarized message
     summary_message = {
         "role": "user",
-        "content": f"[SUMMARY OF PREVIOUS INTERACTIONS]\n\n" + "\n".join(summary_parts[:10])
+        "content": f"""[WORKFLOW STATE SUMMARY]
+        Current Branch: {current_branch or "unknown"}
+        Files Modified: {", ".join(files_modified) if files_modified else "none"}
+        Previous Actions: {len(old_messages)} steps completed
+        Key Results: {"\n".join(summary_parts[:15])}
+        """
     }
     
     return [initial_message, summary_message] + recent_messages
@@ -309,22 +316,137 @@ TOOLS = [
 # Tool Routing Helper
 # ======================================
 def get_server_for_tool(tool_name: str) -> str:
-    """Determine which MCP server handles a given tool."""
-    github_tools = {"get_repo_info", "get_file_tree", "get_file_content", "get_commit_diff"}
-    jenkins_tools = {"get_build_info", "get_console_output"}
-    
+    github_tools = {
+        "get_repo_info", "get_file_tree", "get_file_content", "get_commit_diff",
+        "create_branch", "create_or_update_file", "create_pull_request"
+    }
+    jenkins_tools = {
+        "get_build_info", "trigger_build", "wait_for_build_completion",
+        "get_test_results", "get_console_output"
+    }
+
     if tool_name in github_tools:
         return settings.GITHUB_MCP_URL
     elif tool_name in jenkins_tools:
         return settings.JENKINS_MCP_URL
     else:
         raise ValueError(f"Unknown tool: {tool_name}")
+    
+
+def enforce_branch(params: dict) -> dict:
+    """
+    Injects the currently active branch into any GitHub or Jenkins tool params
+    when missing. Prevents Claude from reverting to 'main'.
+    """
+    if not isinstance(params, dict):
+        return params
+
+    active = state.get_branch()
+
+    # GitHub write/read tools
+    if "branch" in params and not params["branch"]:
+        params["branch"] = active
+    if "ref" in params and not params["ref"]:
+        params["ref"] = active
+
+    # Jenkins trigger
+    if "parameters" in params and isinstance(params["parameters"], dict):
+        params["parameters"].setdefault("BRANCH", active)
+
+    return params
+
+
+
+# =========================================================
+# FULL REPAIR + GENERATION WORKFLOW ENTRY
+# =========================================================
+async def run_full_test_repair_and_generation_workflow():
+    """
+    Complete autonomous CI/CD cycle:
+    1. Identify failing tests on main branch via Jenkins
+    2. Analyze repository structure & failures
+    3. Fix failing tests (test files only)
+    4. Generate new integration tests
+    5. Verify via Jenkins
+    6. Document results & reasoning
+    """
+
+    print("🚦 Running initial Jenkins build on main branch to detect failing tests...")
+    try:
+        # Step 1: Trigger Jenkins build on main
+        trigger_resp = await call_mcp_tool(
+            server_url=settings.JENKINS_MCP_URL,
+            method="tools/call",
+            name="trigger_build",
+            params={"job_name": "test_banking_app", "parameters": {"BRANCH": "main"}}
+        )
+        print(f"✅ Triggered main branch build: {json.dumps(trigger_resp, indent=2)}")
+
+        # Step 2: Retrieve latest build info
+        build_info = await call_mcp_tool(
+            server_url=settings.JENKINS_MCP_URL,
+            method="tools/call",
+            name="get_build_info",
+            params={"job_name": "test_banking_app"}
+        )
+
+        if "result" not in build_info:
+            raise RuntimeError(f"Unexpected response from Jenkins MCP: {build_info}")
+
+        build_number = build_info["result"]["build_number"]
+        build_status = build_info["result"]["status"]
+
+        print(f"📄 Latest Jenkins build #{build_number} status: {build_status}")
+
+        # Step 3: Get test results
+        test_results = await call_mcp_tool(
+            server_url=settings.JENKINS_MCP_URL,
+            method="tools/call",
+            name="get_test_results",
+            params={"job_name": "test_banking_app", "build_number": build_number}
+        )
+        print(f"🧪 Test Results: {json.dumps(test_results, indent=2)[:800]}...")
+
+        # Step 4: Prepare initial context for Claude
+        base_prompt = open(PROMPT_FILE, "r", encoding="utf-8").read()
+        context = {
+            "OWNER": "kunalpanda",
+            "REPO_NAME": "test_banking_app",
+            "BRANCH": "main",
+            "INITIAL_BUILD": build_number,
+            "INITIAL_STATUS": build_status,
+            "TEST_RESULTS": json.dumps(test_results["result"], indent=2) if "result" in test_results else "{}"
+        }
+
+        # Build the final prompt
+        from string import Template
+        prompt = Template(base_prompt).safe_substitute(context)
+
+        # Append explicit workflow instructions
+        prompt += (
+            "\n\nYou have just retrieved the latest Jenkins build results for the main branch. "
+            "Start by analyzing failing tests (if any). "
+            "Follow this order:\n"
+            "1. Fix failing tests (test files only, never edit implementation)\n"
+            "2. Generate new tests for improved coverage\n"
+            "3. Verify all tests via Jenkins\n"
+            "4. Document all tests and reasoning in README.md or TEST_SUMMARY.md\n"
+            "Proceed step by step via MCP tools.\n"
+        )
+
+        print("\n🧠 Launching full repair + generation workflow...\n")
+        await run_conversation_with_tools(prompt, max_iterations=75)
+
+    except Exception as e:
+        print(f"❌ Workflow failed: {e}")
+        raise
+
 
 
 # ======================================
 # Main Orchestration Loop with Tool Execution
 # ======================================
-async def run_conversation_with_tools(initial_prompt: str, max_iterations: int = 5):
+async def run_conversation_with_tools(initial_prompt: str, max_iterations: int = 50):
     """
     Run a multi-turn conversation with Claude, executing tools as requested.
     Now with message management to avoid rate limits.
@@ -339,9 +461,14 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
     
     system_prompt = (
         "You are an autonomous agent for software test analysis and improvement. "
+        "CRITICAL STATE TRACKING:\n"
+        "- Always note which branch you're working on\n"
+        "- After updating files, VERIFY changes with get_file_content\n"
+        "- Before triggering builds, confirm the branch name\n"
+        "- If tests fail repeatedly, read back your changes to debug\n"
+        "- Document your current state in each response\n\n"
         "Use the provided tools to explore repositories and analyze CI/CD pipelines. "
-        "Always use exact tool names and required parameters. "
-        "Be concise in your analysis to conserve tokens."
+        "Be concise but track state carefully."
     )
     
     iteration = 0
@@ -418,12 +545,34 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                             server_url=server_url,
                             method="tools/call",
                             name=tool_name,
-                            params=tool_input
+                            params=enforce_branch(tool_input)
                         )
+
                         
                         # Extract result from JSON-RPC response
                         if "result" in mcp_response:
                             result = mcp_response["result"]
+                            
+                            # SPECIAL HANDLING FOR CONSOLE OUTPUT
+                            if tool_name == "get_console_output" and "log" in result:
+                                raw_log = result["log"]
+                                
+                                # Summarize the console output
+                                summary = summarize_jenkins_console(raw_log)
+                                formatted_summary = format_jenkins_summary(summary)
+                                
+                                # Print the summary for monitoring
+                                print("\n📋 JENKINS CONSOLE SUMMARY:")
+                                print(formatted_summary)
+                                
+                                # Return summary to Claude (not the full raw log)
+                                result = {
+                                    "job_name": result.get("job_name"),
+                                    "build_number": result.get("build_number"),
+                                    "summary": summary,
+                                    "formatted_output": formatted_summary
+                                }
+                            
                             result_str = json.dumps(result)
                             
                             # Log truncated result
@@ -470,39 +619,5 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
     
     return messages
 
-# ======================================
-# Main Orchestrator Execution Flow
-# ======================================
-async def run_llm_workflow():
-    print("🚀 Starting Claude MCP integration test...")
-    print("="*60)
-
-    # Load prompt template
-    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
-        base_prompt = f.read()
-
-    # Prepare context
-    context = {
-        "OWNER": "kunalpanda",
-        "REPO_NAME": "capstone_test_repo_1",
-        "BRANCH": "main",
-        "GITHUB_MCP_URL": settings.GITHUB_MCP_URL
-    }
-
-    # Replace template variables
-    prompt = Template(base_prompt).safe_substitute(context)
-    
-    print("\n📝 Initial Prompt:")
-    print("-"*60)
-    print(prompt[:500] + "..." if len(prompt) > 500 else prompt)
-    print("-"*60)
-
-    # Run the conversation loop
-    final_messages = await run_conversation_with_tools(prompt, max_iterations=10)
-    
-    print("\n✅ Workflow complete!")
-    print(f"📊 Total messages exchanged: {len(final_messages)}")
-
-
 if __name__ == "__main__":
-    asyncio.run(run_llm_workflow())
+    asyncio.run(run_full_test_repair_and_generation_workflow())
