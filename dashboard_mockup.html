@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic AI Core - DevOps Automation Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid #3b82f6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-indicator.warning {
+            background: #f59e0b;
+        }
+
+        .status-indicator.error {
+            background: #ef4444;
+        }
+
+        .progress-bar {
+            width: 150px;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 25% 45% 30%;
+            gap: 1rem;
+            padding: 1rem;
+            overflow: hidden;
+        }
+
+        /* Column Styles */
+        .column {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .column-header {
+            padding: 1rem 1.25rem;
+            background: #334155;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid #475569;
+        }
+
+        .column-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        /* Custom Scrollbar */
+        .column-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .column-content::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .column-content::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        .column-content::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Workflow Timeline */
+        .timeline-item {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 2rem;
+            bottom: -1.5rem;
+            width: 2px;
+            background: #334155;
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1rem;
+            z-index: 1;
+        }
+
+        .timeline-icon.complete {
+            background: #10b981;
+        }
+
+        .timeline-icon.active {
+            background: #3b82f6;
+            animation: pulse 2s infinite;
+        }
+
+        .timeline-icon.pending {
+            background: #475569;
+        }
+
+        .timeline-info {
+            flex: 1;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-time {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        /* Live Output Stream */
+        .output-message {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #0f172a;
+            border-radius: 8px;
+            border-left: 3px solid #475569;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .message-content {
+            line-height: 1.6;
+        }
+
+        .message-content.claude {
+            color: #e2e8f0;
+        }
+
+        .tool-call {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: #1e293b;
+            border-radius: 6px;
+            border: 1px solid #3b82f6;
+        }
+
+        .tool-name {
+            color: #60a5fa;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-input {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: #a5b4fc;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .tool-result {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: #0f172a;
+            border-radius: 4px;
+            border-left: 3px solid #10b981;
+        }
+
+        .result-success {
+            color: #10b981;
+        }
+
+        /* State Panel */
+        .state-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .state-section-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .state-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .state-item:last-child {
+            border-bottom: none;
+        }
+
+        .state-label {
+            color: #94a3b8;
+        }
+
+        .state-value {
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        /* Test Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .metric-card {
+            padding: 1rem;
+            background: #0f172a;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value.success {
+            color: #10b981;
+        }
+
+        .metric-value.error {
+            color: #ef4444;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        /* Recent Actions */
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #0f172a;
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .action-icon {
+            font-size: 1.25rem;
+        }
+
+        .action-text {
+            font-size: 0.875rem;
+        }
+
+        /* Bottom Tabs */
+        .bottom-section {
+            height: 300px;
+            background: #1e293b;
+            border-top: 2px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            background: #1e293b;
+        }
+
+        .tab.active {
+            border-bottom-color: #3b82f6;
+            color: #60a5fa;
+        }
+
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        /* Jenkins Log Styling */
+        .log-line {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            padding: 0.25rem 0;
+            line-height: 1.5;
+        }
+
+        .log-line.info {
+            color: #94a3b8;
+        }
+
+        .log-line.success {
+            color: #10b981;
+        }
+
+        .log-line.error {
+            color: #ef4444;
+        }
+
+        .log-line.warning {
+            color: #f59e0b;
+        }
+
+        /* Test Results Table */
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .test-table th {
+            background: #0f172a;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #334155;
+        }
+
+        .test-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .test-table tr:hover {
+            background: #0f172a;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .badge.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .badge.pending {
+            background: rgba(100, 116, 139, 0.2);
+            color: #94a3b8;
+        }
+
+        /* Auto-scroll button */
+        .auto-scroll {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background: #3b82f6;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
+        }
+
+        .auto-scroll:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        /* Utilities */
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    🤖 Agentic AI Core - DevOps Automation Dashboard
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <div class="status-indicator"></div>
+                        <span>RUNNING</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Iteration: <strong>12/100</strong></span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 12%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span>Phase: <strong>Testing</strong></span>
+                    </div>
+                    <div class="stat-item">
+                        <span>⏱️ <strong id="elapsed-time">03:24</strong></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="main-content">
+            <!-- Left Column: Workflow Progress -->
+            <div class="column">
+                <div class="column-header">
+                    📋 Workflow Timeline
+                </div>
+                <div class="column-content">
+                    <div class="timeline-item">
+                        <div class="timeline-icon complete">✓</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Initialization</div>
+                            <div class="timeline-time">Completed in 2s</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon complete">✓</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Detect Failing Tests</div>
+                            <div class="timeline-time">Completed in 45s</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon complete">✓</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Create Branch</div>
+                            <div class="timeline-time">fix/test-failures-20250108</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon complete">✓</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Analyze Test Failures</div>
+                            <div class="timeline-time">Found 6 failing tests</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon active">⚙️</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Fix Failing Tests</div>
+                            <div class="timeline-time">In progress - 3/6 fixed</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon pending">⏳</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Verify Build</div>
+                            <div class="timeline-time">Pending</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon pending">⏳</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Generate New Tests</div>
+                            <div class="timeline-time">Pending</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon pending">⏳</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Final Verification</div>
+                            <div class="timeline-time">Pending</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-icon pending">⏳</div>
+                        <div class="timeline-info">
+                            <div class="timeline-title">Document Changes</div>
+                            <div class="timeline-time">Pending</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Column: Live Output -->
+            <div class="column" style="position: relative;">
+                <div class="column-header">
+                    💬 Claude's Actions
+                </div>
+                <div class="column-content" id="output-stream">
+                    <div class="output-message">
+                        <div class="message-header">
+                            <span>[12:34:45] ITERATION 11</span>
+                            <span>════════════════════════════════════════════════════</span>
+                        </div>
+                        <div class="message-content claude">
+                            🤖 Claude says:<br><br>
+                            I've identified the root cause of the test failure in AccountServiceTest.java. The test expects a balance of 1000.00 but the actual implementation returns 950.00 after the withdrawal. I'll update the test assertion to match the correct expected value.
+                        </div>
+                        <div class="tool-call">
+                            <div class="tool-name">⚙️ Tool: create_or_update_file</div>
+                            <div class="tool-input">{
+  "owner": "kunalpanda",
+  "repo": "test_banking_app",
+  "path": "web/tests/AccountServiceTest.java",
+  "branch": "fix/test-failures-20250108",
+  "message": "Fix assertion in testWithdraw - expect 950.00",
+  "content": "... (file content truncated) ..."
+}</div>
+                            <div class="tool-result">
+                                <span class="result-success">✅ Success:</span> File updated on branch fix/test-failures-20250108
+                            </div>
+                        </div>
+                        <div class="message-header" style="margin-top: 1rem;">
+                            <span>⏸️ Stop reason: tool_use</span>
+                        </div>
+                    </div>
+
+                    <div class="output-message">
+                        <div class="message-header">
+                            <span>[12:35:12] ITERATION 12</span>
+                            <span>════════════════════════════════════════════════════</span>
+                        </div>
+                        <div class="message-content claude">
+                            🤖 Claude says:<br><br>
+                            Now I'll verify the file was updated correctly by reading it back from the branch.
+                        </div>
+                        <div class="tool-call">
+                            <div class="tool-name">⚙️ Tool: get_file_content</div>
+                            <div class="tool-input">{
+  "owner": "kunalpanda",
+  "repo": "test_banking_app",
+  "path": "web/tests/AccountServiceTest.java",
+  "ref": "fix/test-failures-20250108"
+}</div>
+                            <div class="tool-result">
+                                <span class="result-success">✅ Success:</span> File content retrieved - verified assertion changed to 950.00
+                            </div>
+                        </div>
+                        <div class="message-header" style="margin-top: 1rem;">
+                            <span>⏸️ Stop reason: tool_use</span>
+                        </div>
+                    </div>
+
+                    <div class="output-message" style="background: #0f172a; border-left-color: #3b82f6;">
+                        <div class="message-header">
+                            <span>[12:35:34] ITERATION 13</span>
+                            <span>════════════════════════════════════════════════════</span>
+                        </div>
+                        <div class="message-content claude">
+                            🤖 Claude says:<br><br>
+                            Perfect! The file update is confirmed. I'll now proceed to fix the next failing test in TransactionHistoryTest.java...
+                        </div>
+                    </div>
+                </div>
+                <button class="auto-scroll" onclick="toggleAutoScroll()">Auto-scroll ↓</button>
+            </div>
+
+            <!-- Right Column: State & Metrics -->
+            <div class="column">
+                <div class="column-header">
+                    📊 Current State
+                </div>
+                <div class="column-content">
+                    <!-- Repository Info -->
+                    <div class="state-section">
+                        <div class="state-section-title">🗂️ Repository</div>
+                        <div class="state-item">
+                            <span class="state-label">Name:</span>
+                            <span class="state-value">test_banking_app</span>
+                        </div>
+                        <div class="state-item">
+                            <span class="state-label">Owner:</span>
+                            <span class="state-value">kunalpanda</span>
+                        </div>
+                        <div class="state-item">
+                            <span class="state-label">Branch:</span>
+                            <span class="state-value">fix/test-fail...</span>
+                        </div>
+                        <div class="state-item">
+                            <span class="state-label">Commit:</span>
+                            <span class="state-value">a3f5d2c8</span>
+                        </div>
+                    </div>
+
+                    <!-- Test Metrics -->
+                    <div class="state-section">
+                        <div class="state-section-title">🧪 Test Metrics</div>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">24</div>
+                                <div class="metric-label">Total</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value success">18</div>
+                                <div class="metric-label">Passing</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value error">6</div>
+                                <div class="metric-label">Failing</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">0</div>
+                                <div class="metric-label">Skipped</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Build Info -->
+                    <div class="state-section">
+                        <div class="state-section-title">🏗️ Build Info</div>
+                        <div class="state-item">
+                            <span class="state-label">Build Number:</span>
+                            <span class="state-value">#47</span>
+                        </div>
+                        <div class="state-item">
+                            <span class="state-label">Status:</span>
+                            <span class="state-value" style="color: #ef4444;">FAILURE</span>
+                        </div>
+                        <div class="state-item">
+                            <span class="state-label">Duration:</span>
+                            <span class="state-value">3m 24s</span>
+                        </div>
+                        <div class="state-item">
+                            <span class="state-label">Triggered By:</span>
+                            <span class="state-value">Claude AI</span>
+                        </div>
+                    </div>
+
+                    <!-- Recent Actions -->
+                    <div class="state-section">
+                        <div class="state-section-title">📝 Recent Actions</div>
+                        <div class="action-item">
+                            <span class="action-icon">🌿</span>
+                            <span class="action-text">Created branch fix/test-failures-20250108</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">🔧</span>
+                            <span class="action-text">Fixed AccountServiceTest.java</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">🔧</span>
+                            <span class="action-text">Fixed BalanceTest.java</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">🔧</span>
+                            <span class="action-text">Fixed WithdrawalTest.java</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">🚀</span>
+                            <span class="action-text">Triggered Jenkins build #47</span>
+                        </div>
+                        <div class="action-item">
+                            <span class="action-icon">⏳</span>
+                            <span class="action-text">Waiting for build results...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Section: Detailed View Tabs -->
+        <div class="bottom-section">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab(event, 'jenkins-logs')">Jenkins Logs</div>
+                <div class="tab" onclick="switchTab(event, 'test-results')">Test Results</div>
+                <div class="tab" onclick="switchTab(event, 'file-changes')">File Changes</div>
+                <div class="tab" onclick="switchTab(event, 'summary')">Summary</div>
+            </div>
+            <div class="tab-content" id="tab-content">
+                <!-- Jenkins Logs (Default) -->
+                <div id="jenkins-logs">
+                    <div class="log-line info">[INFO] Scanning for projects...</div>
+                    <div class="log-line info">[INFO] ------------------------------------------------------------------------</div>
+                    <div class="log-line info">[INFO] Building Banking Application 1.0-SNAPSHOT</div>
+                    <div class="log-line info">[INFO] ------------------------------------------------------------------------</div>
+                    <div class="log-line info">[INFO] </div>
+                    <div class="log-line info">[INFO] --- maven-surefire-plugin:2.22.2:test (default-test) @ banking-app ---</div>
+                    <div class="log-line info">[INFO] </div>
+                    <div class="log-line info">[INFO] -------------------------------------------------------</div>
+                    <div class="log-line info">[INFO]  T E S T S</div>
+                    <div class="log-line info">[INFO] -------------------------------------------------------</div>
+                    <div class="log-line info">[INFO] Running com.bankapp.tests.AccountServiceTest</div>
+                    <div class="log-line success">[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.142 s - in com.bankapp.tests.AccountServiceTest</div>
+                    <div class="log-line info">[INFO] Running com.bankapp.tests.TransactionHistoryTest</div>
+                    <div class="log-line error">[ERROR] Tests run: 4, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.098 s <<< FAILURE! - in com.bankapp.tests.TransactionHistoryTest</div>
+                    <div class="log-line error">[ERROR] testRecentTransactions  Time elapsed: 0.032 s  <<< FAILURE!</div>
+                    <div class="log-line error">org.opentest4j.AssertionFailedError: expected: <10> but was: <9></div>
+                    <div class="log-line info">[INFO] </div>
+                    <div class="log-line info">[INFO] Results:</div>
+                    <div class="log-line info">[INFO] </div>
+                    <div class="log-line error">[ERROR] Failures: </div>
+                    <div class="log-line error">[ERROR]   TransactionHistoryTest.testRecentTransactions:42 expected: <10> but was: <9></div>
+                    <div class="log-line error">[ERROR]   TransactionHistoryTest.testTransactionFilter:67 expected: <5> but was: <4></div>
+                    <div class="log-line info">[INFO] </div>
+                    <div class="log-line error">[ERROR] Tests run: 24, Failures: 6, Errors: 0, Skipped: 0</div>
+                    <div class="log-line info">[INFO] </div>
+                    <div class="log-line error">[INFO] ------------------------------------------------------------------------</div>
+                    <div class="log-line error">[INFO] BUILD FAILURE</div>
+                    <div class="log-line error">[INFO] ------------------------------------------------------------------------</div>
+                    <div class="log-line info">[INFO] Total time:  3 min 24 s</div>
+                    <div class="log-line info">[INFO] Finished at: 2025-01-08T12:34:56Z</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-scroll functionality
+        let autoScroll = true;
+        const outputStream = document.getElementById('output-stream');
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const button = document.querySelector('.auto-scroll');
+            button.textContent = autoScroll ? 'Auto-scroll ↓' : 'Auto-scroll (off)';
+            if (autoScroll) {
+                outputStream.scrollTop = outputStream.scrollHeight;
+            }
+        }
+
+        // Simulate new messages being added
+        function addNewMessage() {
+            const messages = [
+                {
+                    iteration: Math.floor(Math.random() * 50) + 1,
+                    text: "Analyzing test failure patterns...",
+                    tool: null
+                },
+                {
+                    iteration: Math.floor(Math.random() * 50) + 1,
+                    text: "I'll now trigger a Jenkins build to verify the fixes.",
+                    tool: {
+                        name: "trigger_build",
+                        input: '{\n  "job_name": "test_banking_app",\n  "parameters": {\n    "BRANCH": "fix/test-failures-20250108"\n  }\n}',
+                        result: "✅ Success: Build #48 triggered"
+                    }
+                }
+            ];
+
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            
+            const messageHTML = `
+                <div class="output-message">
+                    <div class="message-header">
+                        <span>[${time}] ITERATION ${message.iteration}</span>
+                        <span>════════════════════════════════════════════════════</span>
+                    </div>
+                    <div class="message-content claude">
+                        🤖 Claude says:<br><br>
+                        ${message.text}
+                    </div>
+                    ${message.tool ? `
+                        <div class="tool-call">
+                            <div class="tool-name">⚙️ Tool: ${message.tool.name}</div>
+                            <div class="tool-input">${message.tool.input}</div>
+                            <div class="tool-result">
+                                <span class="result-success">${message.tool.result}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="message-header" style="margin-top: 1rem;">
+                        <span>⏸️ Stop reason: ${message.tool ? 'tool_use' : 'end_turn'}</span>
+                    </div>
+                </div>
+            `;
+
+            outputStream.insertAdjacentHTML('beforeend', messageHTML);
+
+            if (autoScroll) {
+                outputStream.scrollTop = outputStream.scrollHeight;
+            }
+        }
+
+        // Add new message every 5 seconds for demo
+        setInterval(addNewMessage, 5000);
+
+        // Tab switching
+        function switchTab(event, tabName) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+
+            // Update content based on tab
+            const content = document.getElementById('tab-content');
+            
+            const tabContents = {
+                'jenkins-logs': `
+                    <div id="jenkins-logs">
+                        <div class="log-line info">[INFO] Scanning for projects...</div>
+                        <div class="log-line info">[INFO] Building Banking Application 1.0-SNAPSHOT</div>
+                        <div class="log-line success">[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0</div>
+                        <div class="log-line error">[ERROR] Tests run: 24, Failures: 6, Errors: 0, Skipped: 0</div>
+                        <div class="log-line error">[INFO] BUILD FAILURE</div>
+                    </div>
+                `,
+                'test-results': `
+                    <table class="test-table">
+                        <thead>
+                            <tr>
+                                <th>Test Class</th>
+                                <th>Test Method</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Error Message</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>AccountServiceTest</td>
+                                <td>testDeposit</td>
+                                <td><span class="badge success">PASS</span></td>
+                                <td>0.042s</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>AccountServiceTest</td>
+                                <td>testWithdraw</td>
+                                <td><span class="badge success">PASS</span></td>
+                                <td>0.038s</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>TransactionHistoryTest</td>
+                                <td>testRecentTransactions</td>
+                                <td><span class="badge error">FAIL</span></td>
+                                <td>0.032s</td>
+                                <td>expected: &lt;10&gt; but was: &lt;9&gt;</td>
+                            </tr>
+                            <tr>
+                                <td>TransactionHistoryTest</td>
+                                <td>testTransactionFilter</td>
+                                <td><span class="badge error">FAIL</span></td>
+                                <td>0.028s</td>
+                                <td>expected: &lt;5&gt; but was: &lt;4&gt;</td>
+                            </tr>
+                            <tr>
+                                <td>BalanceTest</td>
+                                <td>testInitialBalance</td>
+                                <td><span class="badge success">PASS</span></td>
+                                <td>0.015s</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>WithdrawalTest</td>
+                                <td>testInsufficientFunds</td>
+                                <td><span class="badge error">FAIL</span></td>
+                                <td>0.024s</td>
+                                <td>Expected exception not thrown</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `,
+                'file-changes': `
+                    <div style="font-family: 'Courier New', monospace; font-size: 0.875rem;">
+                        <div style="color: #60a5fa; margin-bottom: 1rem; font-weight: 600;">
+                            📝 Modified Files (3)
+                        </div>
+                        <div style="background: #0f172a; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                            <div style="color: #f59e0b; margin-bottom: 0.5rem;">web/tests/AccountServiceTest.java</div>
+                            <div style="color: #ef4444;">- assertEquals(1000.00, account.getBalance());</div>
+                            <div style="color: #10b981;">+ assertEquals(950.00, account.getBalance());</div>
+                        </div>
+                        <div style="background: #0f172a; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                            <div style="color: #f59e0b; margin-bottom: 0.5rem;">web/tests/BalanceTest.java</div>
+                            <div style="color: #ef4444;">- assertTrue(balance > 0);</div>
+                            <div style="color: #10b981;">+ assertTrue(balance >= 0);</div>
+                        </div>
+                        <div style="background: #0f172a; padding: 1rem; border-radius: 6px;">
+                            <div style="color: #f59e0b; margin-bottom: 0.5rem;">web/tests/WithdrawalTest.java</div>
+                            <div style="color: #ef4444;">- assertThrows(InsufficientFundsException.class, () -> {</div>
+                            <div style="color: #ef4444;">-     account.withdraw(2000);</div>
+                            <div style="color: #ef4444;">- });</div>
+                            <div style="color: #10b981;">+ Exception ex = assertThrows(InsufficientFundsException.class, () -> {</div>
+                            <div style="color: #10b981;">+     account.withdraw(2000);</div>
+                            <div style="color: #10b981;">+ });</div>
+                            <div style="color: #10b981;">+ assertEquals("Insufficient funds", ex.getMessage());</div>
+                        </div>
+                    </div>
+                `,
+                'summary': `
+                    <div>
+                        <h3 style="color: #60a5fa; margin-bottom: 1rem;">📊 Workflow Summary</h3>
+                        <div style="background: #0f172a; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <h4 style="color: #10b981; margin-bottom: 0.5rem;">✅ Completed Actions</h4>
+                            <ul style="list-style: none; padding-left: 0; line-height: 2;">
+                                <li>✓ Detected 6 failing tests on main branch</li>
+                                <li>✓ Created feature branch: fix/test-failures-20250108</li>
+                                <li>✓ Fixed 3 test files (AccountServiceTest, BalanceTest, WithdrawalTest)</li>
+                                <li>✓ Verified file changes via get_file_content</li>
+                                <li>✓ Triggered Jenkins build #47</li>
+                            </ul>
+                        </div>
+                        <div style="background: #0f172a; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <h4 style="color: #f59e0b; margin-bottom: 0.5rem;">⏳ In Progress</h4>
+                            <ul style="list-style: none; padding-left: 0; line-height: 2;">
+                                <li>⚙️ Fixing remaining 3 failing tests</li>
+                                <li>⚙️ Waiting for Jenkins build completion</li>
+                            </ul>
+                        </div>
+                        <div style="background: #0f172a; padding: 1.5rem; border-radius: 8px;">
+                            <h4 style="color: #94a3b8; margin-bottom: 0.5rem;">📋 Next Steps</h4>
+                            <ul style="list-style: none; padding-left: 0; line-height: 2;">
+                                <li>1. Complete fixing remaining failing tests</li>
+                                <li>2. Verify all tests pass in Jenkins</li>
+                                <li>3. Generate new integration tests</li>
+                                <li>4. Create pull request with all changes</li>
+                                <li>5. Document test improvements in README</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            };
+
+            content.innerHTML = tabContents[tabName] || tabContents['jenkins-logs'];
+        }
+
+        // Update progress bar animation
+        setInterval(() => {
+            const progressFill = document.querySelector('.progress-fill');
+            const currentWidth = parseInt(progressFill.style.width);
+            if (currentWidth < 100) {
+                progressFill.style.width = (currentWidth + 1) + '%';
+            }
+        }, 2000);
+
+        // Update elapsed time
+        let seconds = 204; // Starting at 3:24
+        setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            document.getElementById('elapsed-time').textContent = 
+                `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 httpx
-anthropic   # or any Claude client you use
+anthropic
 mcp
+websockets
+python-multipart

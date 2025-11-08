@@ -1,0 +1,8 @@
+/* src/App.css */
+/* Main application styles */
+
+.App {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
