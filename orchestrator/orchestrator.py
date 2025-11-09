@@ -11,6 +11,7 @@ from orchestrator.mcp_client import call_mcp_tool
 from orchestrator.config import settings
 from orchestrator.state import WorkflowState
 from orchestrator.jenkins_utils import summarize_jenkins_console, format_jenkins_summary
+from backend.event_emitter import EventEmitter
 
 
 # ======================================
@@ -21,6 +22,7 @@ CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 PROMPT_FILE = "prompts/func_test.txt"
 
 state = WorkflowState()
+emitter = EventEmitter()
 
 
 # ======================================
@@ -371,6 +373,13 @@ async def run_full_test_repair_and_generation_workflow():
     6. Document results & reasoning
     """
 
+    await emitter.emit_workflow_start(
+        repo_owner="kunalpanda",
+        repo_name="test_banking_app",
+        branch="main",
+        max_iterations=75
+    )
+
     print("🚦 Running initial Jenkins build on main branch to detect failing tests...")
     try:
         # Step 1: Trigger Jenkins build on main
@@ -439,6 +448,13 @@ async def run_full_test_repair_and_generation_workflow():
 
     except Exception as e:
         print(f"❌ Workflow failed: {e}")
+
+        await emitter.emit_error(
+            error_type=type(e).__name__,
+            error_message=str(e),
+            context={"function": "run_full_test_repair_and_generation_workflow"}
+        )
+
         raise
 
 
@@ -478,6 +494,8 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
         print(f"\n{'='*60}")
         print(f"ITERATION {iteration}")
         print(f"{'='*60}")
+
+        await emitter.emit_iteration_start(iteration, max_iterations)
         
         # Truncate large tool results BEFORE sending
         messages = truncate_tool_results(messages)
@@ -518,6 +536,12 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                 else:
                     print(f"\n💬 Claude says:\n{text}\n")
         
+        await emitter.emit_claude_response(
+            iteration=iteration,
+            stop_reason=stop_reason,
+            content=response["content"]
+        )
+        
         # If no tool use, we're done
         if stop_reason == "end_turn":
             print("✅ Conversation complete - no more tool requests")
@@ -535,6 +559,13 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                     
                     print(f"\n⚙️  Tool requested: {tool_name}")
                     print(f"📦 Input: {json.dumps(tool_input, indent=2)[:200]}...")
+
+                    await emitter.emit_tool_call(
+                        iteration=iteration,
+                        tool_name=tool_name,
+                        tool_input=tool_input,
+                        tool_use_id=tool_use_id
+                    )
                     
                     try:
                         # Route to appropriate MCP server
@@ -580,9 +611,28 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                                 print(f"✅ Success: {result_str[:300]}... [truncated]")
                             else:
                                 print(f"✅ Success: {result_str}")
+                            
+                            await emitter.emit_tool_result(
+                                iteration=iteration,
+                                tool_name=tool_name,
+                                tool_use_id=tool_use_id,
+                                success=True,
+                                result=result
+                            )
+
                         elif "error" in mcp_response:
                             result = {"error": mcp_response["error"]}
                             print(f"❌ Error: {result}")
+
+                            await emitter.emit_tool_result(
+                                iteration=iteration,
+                                tool_name=tool_name,
+                                tool_use_id=tool_use_id,
+                                success=False,
+                                result=result,
+                                error=str(mcp_response["error"])
+                            )
+
                         else:
                             result = mcp_response
                         
@@ -608,6 +658,8 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                     "content": tool_results
                 })
                 print(f"📨 Sending {len(tool_results)} tool result(s) back to Claude...")
+
+                await emitter.emit_state_update(state.summary())
         else:
             print(f"⚠️  Unexpected stop reason: {stop_reason}")
             break
@@ -616,6 +668,12 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
     print(f"Completed after {iteration} iterations")
     print(f"📊 Final message count: {len(messages)}")
     print(f"{'='*60}")
+
+    await emitter.emit_workflow_complete(
+    total_iterations=iteration,
+    success=(iteration < max_iterations),
+    reason="max_iterations_reached" if iteration >= max_iterations else "workflow_complete"
+    )
     
     return messages
 
