@@ -1,14 +1,36 @@
-// src/hooks/useWebSocket.ts
-// Custom hook for managing WebSocket connection to backend
+import { useEffect, useState, useRef } from 'react';
+import { WebSocketService } from '../services/websocket';
+import { BaseEvent } from '../services/types';
 
-import { useState, useEffect } from 'react';
-
-export const useWebSocket = (url: string) => {
-  // WebSocket connection logic will be implemented here
+export const useWebSocket = (url?: string) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [events, setEvents] = useState<BaseEvent[]>([]);
+  const wsRef = useRef<WebSocketService | null>(null);
+  
+  useEffect(() => {
+    const ws = new WebSocketService(url);
+    wsRef.current = ws;
+    
+    // Connect
+    ws.connect()
+      .then(() => setIsConnected(true))
+      .catch(console.error);
+    
+    // Subscribe to events
+    const unsubscribe = ws.subscribe((event) => {
+      setEvents(prev => [...prev, event]);
+    });
+    
+    // Cleanup
+    return () => {
+      unsubscribe();
+      ws.disconnect();
+    };
+  }, [url]);
   
   return {
-    messages: [],
-    state: null,
-    isConnected: false
+    isConnected,
+    events,
+    clearEvents: () => setEvents([])
   };
 };

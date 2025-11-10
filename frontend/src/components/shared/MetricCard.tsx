@@ -1,16 +1,16 @@
-// src/components/shared/MetricCard.tsx
-// Card component for displaying test metrics
-
 import React from 'react';
 
 interface MetricCardProps {
-  // Props will be defined during implementation
+  label: string;
+  value: number;
+  type?: 'success' | 'error' | 'default';
 }
 
-export const MetricCard: React.FC<MetricCardProps> = (props) => {
+export const MetricCard: React.FC<MetricCardProps> = ({ label, value, type = 'default' }) => {
   return (
-    <div>
-      {/* Metric card content */}
+    <div className="metric-card">
+      <div className={`metric-value ${type}`}>{value}</div>
+      <div className="metric-label">{label}</div>
     </div>
   );
 };

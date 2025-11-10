@@ -1,11 +1,4 @@
-/* src/index.css */
-/* Global styles for the dashboard */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* index.css - Global styles and CSS reset */
 
 body {
   margin: 0;
@@ -17,5 +10,11 @@ body {
 }
 
 code {
-  font-family: 'Courier New', monospace;
+  font-family: 'Courier New', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }

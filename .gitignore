@@ -1,1 +1,16 @@
 .env
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/build/
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+frontend/.turbo/
+frontend/.cache/
+frontend/.vite/
+frontend/coverage/
+frontend/yarn-error.log
+frontend/npm-debug.log*
+frontend/pnpm-debug.log*
+frontend/.eslintcache

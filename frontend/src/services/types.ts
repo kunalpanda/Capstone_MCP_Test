@@ -1,56 +1,110 @@
-// src/services/types.ts
-// TypeScript type definitions for dashboard data structures
+// Event types from backend
+export type EventType = 
+  | 'workflow_start'
+  | 'iteration_start'
+  | 'iteration_end'
+  | 'claude_response'
+  | 'tool_call'
+  | 'tool_result'
+  | 'state_update'
+  | 'workflow_complete'
+  | 'error'
+  | 'log';
 
-export interface OrchestratorEvent {
+// Base event structure
+export interface BaseEvent {
+  type: EventType;
   timestamp: string;
-  type: 'iteration_start' | 'claude_response' | 'tool_result' | 'state_update';
   data: any;
 }
 
-export interface WorkflowState {
-  phase: string;
-  commit: string | null;
-  repo: string | null;
+// Specific event data types
+export interface WorkflowStartData {
+  repo_owner: string;
+  repo_name: string;
   branch: string;
+  max_iterations: number;
+  workflow_type: string;
+}
+
+export interface IterationStartData {
   iteration: number;
-  failed_tests: number;
-  proposed_fixes: number;
-  approved_fixes: number;
+  max_iterations: number;
+  progress_percent: number;
 }
 
-export interface Message {
-  id: string;
-  timestamp: string;
+export interface ClaudeResponseData {
   iteration: number;
-  content: string;
-  toolCall?: ToolCall;
-  stopReason?: string;
+  stop_reason: string;
+  text_content: string | null;
+  has_tool_use: boolean;
+  tool_count: number;
+  message_preview: string | null;
 }
 
-export interface ToolCall {
-  name: string;
-  input: any;
-  result?: any;
-  success?: boolean;
+export interface ToolCallData {
+  iteration: number;
+  tool_name: string;
+  tool_input: Record<string, any>;
+  tool_use_id: string;
+  input_preview: string;
 }
 
-export interface TestMetrics {
-  total: number;
-  passing: number;
-  failing: number;
-  skipped: number;
+export interface ToolResultData {
+  iteration: number;
+  tool_name: string;
+  tool_use_id: string;
+  success: boolean;
+  result_summary: string | null;
+  error_message: string | null;
+  execution_time_ms: number | null;
 }
 
-export interface BuildInfo {
-  buildNumber: number;
-  status: 'SUCCESS' | 'FAILURE' | 'RUNNING' | 'PENDING';
-  duration?: string;
-  triggeredBy?: string;
+export interface StateUpdateData {
+  branch: string | null;
+  commit_sha: string | null;
+  iteration: number | null;
+  tests: {
+    failed: number | null;
+    passing: number | null;
+    total: number | null;
+  } | null;
+  build: {
+    number: number | null;
+    status: string | null;
+  } | null;
+  phase: string | null;
 }
 
-export interface RepositoryInfo {
-  name: string;
-  owner: string;
+export interface WorkflowCompleteData {
+  total_iterations: number;
+  success: boolean;
+  reason: string | null;
+  summary: {
+    tests_fixed: number | null;
+    tests_generated: number | null;
+    files_modified: number | null;
+  };
+  duration_seconds: number | null;
+}
+
+// Orchestrator state
+export interface OrchestratorState {
+  status: 'idle' | 'running' | 'complete' | 'error';
+  currentIteration: number;
+  maxIterations: number;
+  repo: string;
   branch: string;
-  commit: string;
+  testMetrics: {
+    total: number;
+    passing: number;
+    failing: number;
+    skipped: number;
+  };
+  buildInfo: {
+    number: number | null;
+    status: string | null;
+    duration: string | null;
+  };
+  recentActions: string[];
 }

@@ -1,20 +1,80 @@
-// src/services/websocket.ts
-// WebSocket client service for connecting to backend
+import { BaseEvent } from './types';
 
-class WebSocketService {
+export class WebSocketService {
   private ws: WebSocket | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 2000;
+  private listeners: ((event: BaseEvent) => void)[] = [];
   
-  connect(url: string) {
-    // Connection logic will be implemented here
+  constructor(private url: string = 'ws://localhost:8000/ws') {}
+  
+  connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        this.ws = new WebSocket(this.url);
+        
+        this.ws.onopen = () => {
+          console.log('✅ WebSocket connected');
+          this.reconnectAttempts = 0;
+          resolve();
+        };
+        
+        this.ws.onmessage = (message) => {
+          try {
+            const event: BaseEvent = JSON.parse(message.data);
+            this.notifyListeners(event);
+          } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+          }
+        };
+        
+        this.ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          reject(error);
+        };
+        
+        this.ws.onclose = () => {
+          console.log('WebSocket disconnected');
+          this.handleReconnect();
+        };
+        
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+  
+  private handleReconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      console.log(`Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      
+      setTimeout(() => {
+        this.connect().catch(console.error);
+      }, this.reconnectDelay * this.reconnectAttempts);
+    }
+  }
+  
+  subscribe(listener: (event: BaseEvent) => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+  
+  private notifyListeners(event: BaseEvent) {
+    this.listeners.forEach(listener => listener(event));
   }
   
   disconnect() {
-    // Disconnection logic will be implemented here
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
   }
   
-  send(data: any) {
-    // Send message logic will be implemented here
+  isConnected(): boolean {
+    return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 }
-
-export const wsService = new WebSocketService();
