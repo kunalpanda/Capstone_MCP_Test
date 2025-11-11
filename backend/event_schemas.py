@@ -152,18 +152,13 @@ class ToolResultEvent:
 
 @dataclass
 class StateUpdateEvent:
-    """Event emitted when workflow state changes."""
+    """Event emitted when workflow state changes (trimmed for UI needs)."""
     branch: Optional[str] = None
     commit_sha: Optional[str] = None
     iteration: Optional[int] = None
-    failed_tests: Optional[int] = None
-    passing_tests: Optional[int] = None
-    total_tests: Optional[int] = None
-    build_number: Optional[int] = None
-    build_status: Optional[str] = None
     phase: Optional[str] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.STATE_UPDATE,
@@ -172,15 +167,6 @@ class StateUpdateEvent:
                 "branch": self.branch,
                 "commit_sha": self.commit_sha,
                 "iteration": self.iteration,
-                "tests": {
-                    "failed": self.failed_tests,
-                    "passing": self.passing_tests,
-                    "total": self.total_tests
-                } if self.total_tests is not None else None,
-                "build": {
-                    "number": self.build_number,
-                    "status": self.build_status
-                } if self.build_number is not None else None,
                 "phase": self.phase
             }
         }
@@ -374,7 +360,6 @@ def create_state_update(state_dict: Dict[str, Any]) -> Dict[str, Any]:
         branch=state_dict.get("branch") or state_dict.get("active_branch"),
         commit_sha=state_dict.get("commit"),
         iteration=state_dict.get("iteration"),
-        failed_tests=state_dict.get("failed_tests"),
         phase=state_dict.get("phase")
     )
     return event.to_dict()

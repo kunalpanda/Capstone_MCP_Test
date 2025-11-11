@@ -64,17 +64,9 @@ export interface StateUpdateData {
   branch: string | null;
   commit_sha: string | null;
   iteration: number | null;
-  tests: {
-    failed: number | null;
-    passing: number | null;
-    total: number | null;
-  } | null;
-  build: {
-    number: number | null;
-    status: string | null;
-  } | null;
   phase: string | null;
 }
+
 
 export interface WorkflowCompleteData {
   total_iterations: number;
@@ -95,16 +87,5 @@ export interface OrchestratorState {
   maxIterations: number;
   repo: string;
   branch: string;
-  testMetrics: {
-    total: number;
-    passing: number;
-    failing: number;
-    skipped: number;
-  };
-  buildInfo: {
-    number: number | null;
-    status: string | null;
-    duration: string | null;
-  };
   recentActions: string[];
 }

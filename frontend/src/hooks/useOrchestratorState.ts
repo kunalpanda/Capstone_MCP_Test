@@ -8,19 +8,17 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
     maxIterations: 50,
     repo: '',
     branch: '',
-    testMetrics: { total: 0, passing: 0, failing: 0, skipped: 0 },
-    buildInfo: { number: null, status: null, duration: null },
     recentActions: []
   });
-  
+
   useEffect(() => {
     if (events.length === 0) return;
-    
+
     const latestEvent = events[events.length - 1];
-    
+
     setState(prev => {
       const newState = { ...prev };
-      
+
       switch (latestEvent.type) {
         case 'workflow_start':
           newState.status = 'running';
@@ -28,36 +26,21 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
           newState.branch = latestEvent.data.branch;
           newState.maxIterations = latestEvent.data.max_iterations;
           break;
-          
+
         case 'iteration_start':
           newState.currentIteration = latestEvent.data.iteration;
           break;
-          
+
         case 'state_update':
-          if (latestEvent.data.tests) {
-            newState.testMetrics = {
-              total: latestEvent.data.tests.total || 0,
-              passing: latestEvent.data.tests.passing || 0,
-              failing: latestEvent.data.tests.failed || 0,
-              skipped: 0
-            };
-          }
-          if (latestEvent.data.build) {
-            newState.buildInfo = {
-              number: latestEvent.data.build.number,
-              status: latestEvent.data.build.status,
-              duration: null
-            };
-          }
           if (latestEvent.data.branch) {
             newState.branch = latestEvent.data.branch;
           }
           break;
-          
+
         case 'workflow_complete':
           newState.status = latestEvent.data.success ? 'complete' : 'error';
           break;
-          
+
         case 'tool_call':
           newState.recentActions = [
             `Called ${latestEvent.data.tool_name}`,
@@ -65,10 +48,10 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
           ];
           break;
       }
-      
+
       return newState;
     });
   }, [events]);
-  
+
   return state;
 };
