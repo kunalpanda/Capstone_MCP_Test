@@ -377,7 +377,7 @@ async def run_full_test_repair_and_generation_workflow():
         repo_owner="kunalpanda",
         repo_name="test_banking_app",
         branch="main",
-        max_iterations=75
+        max_iterations=50
     )
 
     print("🚦 Running initial Jenkins build on main branch to detect failing tests...")
@@ -444,7 +444,7 @@ async def run_full_test_repair_and_generation_workflow():
         )
 
         print("\n🧠 Launching full repair + generation workflow...\n")
-        await run_conversation_with_tools(prompt, max_iterations=75)
+        await run_conversation_with_tools(prompt, max_iterations=50)
 
     except Exception as e:
         print(f"❌ Workflow failed: {e}")
@@ -584,25 +584,52 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                         if "result" in mcp_response:
                             result = mcp_response["result"]
                             
+                            # === Branch tracking ===
+                            if tool_name == "create_branch" and "branch_name" in result:
+                                state.branch = result["branch_name"]
+                                print(f"🔀 Updated active branch -> {state.branch}")
+
+                            elif tool_name == "create_or_update_file" and "branch" in result:
+                                state.branch = result["branch"]
+                                print(f"📝 File modified on branch -> {state.branch}")
+
+                            elif tool_name == "trigger_build" and "parameters" in tool_input:
+                                branch_param = tool_input["parameters"].get("BRANCH")
+                                if branch_param:
+                                    state.branch = branch_param
+                                    print(f"🏗️ Build triggered for branch -> {state.branch}")
+
                             # SPECIAL HANDLING FOR CONSOLE OUTPUT
                             if tool_name == "get_console_output" and "log" in result:
                                 raw_log = result["log"]
-                                
-                                # Summarize the console output
+
+                                # === Enhanced handling for compilation errors ===
                                 summary = summarize_jenkins_console(raw_log)
-                                formatted_summary = format_jenkins_summary(summary)
-                                
-                                # Print the summary for monitoring
-                                print("\n📋 JENKINS CONSOLE SUMMARY:")
-                                print(formatted_summary)
-                                
-                                # Return summary to Claude (not the full raw log)
-                                result = {
-                                    "job_name": result.get("job_name"),
-                                    "build_number": result.get("build_number"),
-                                    "summary": summary,
-                                    "formatted_output": formatted_summary
-                                }
+
+                                # If this was a compilation or build failure, send the real log instead of the summary
+                                if summary.get("error_type") == "compilation_error":
+                                    print("⚠️ Detected compilation failure — sending full console log to Claude.")
+                                    # Truncate for safety, avoid sending multi-MB logs
+                                    truncated_log = raw_log[:8000]
+                                    result = {
+                                        "job_name": result.get("job_name"),
+                                        "build_number": result.get("build_number"),
+                                        "log_excerpt": truncated_log,
+                                        "note": "Raw log excerpt provided due to compilation failure."
+                                    }
+
+                                else:
+                                    # Normal summarization path
+                                    formatted_summary = format_jenkins_summary(summary)
+                                    print("\n📋 JENKINS CONSOLE SUMMARY:")
+                                    print(formatted_summary)
+                                    result = {
+                                        "job_name": result.get("job_name"),
+                                        "build_number": result.get("build_number"),
+                                        "summary": summary,
+                                        "formatted_output": formatted_summary
+                                    }
+
                             
                             result_str = json.dumps(result)
                             
