@@ -1,3 +1,5 @@
 uvicorn mcp_servers.github_server.server:app --port 8010
 uvicorn mcp_servers.jenkins_server.server:app --port 8020
+python backend\websocket_server.py
+cd frontend && npm start
 python -m orchestrator.orchestrator
