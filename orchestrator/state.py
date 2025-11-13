@@ -20,6 +20,8 @@ class WorkflowState:
         self.proposed_fixes = []
         self.approved_fixes = []
         self.iteration = 0
+        self.pr_number = None
+        self.pr_summary = None
 
     # ========== NEW UTILS ==========
 

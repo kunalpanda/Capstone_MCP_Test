@@ -10,7 +10,6 @@ import json
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import logging
-import time
 
 # Use relative import when running from backend directory
 try:
@@ -232,6 +231,41 @@ class EventEmitter:
         event = create_log(log_level, message, iteration, context)
         return await self._send_event(event)
     
+    async def emit_pr_summary(
+        self,
+        pr_number: int,
+        pr_url: str,
+        title: str,
+        body: str,
+        branch: Optional[str] = None,
+        iteration: Optional[int] = None
+    ) -> bool:
+        """
+        Emit PR summary event.
+        
+        Args:
+            pr_number: GitHub PR number
+            pr_url: Full URL to PR
+            title: PR title
+            body: PR description (Claude's summary)
+            branch: Branch name
+            iteration: Current iteration number
+        """
+        event = {
+            "type": "pr_summary",
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": {
+                "pr_number": pr_number,
+                "pr_url": pr_url,
+                "title": title,
+                "body": body,
+                "branch": branch or "unknown",
+                "iteration": iteration or 0,
+                "body_preview": body[:500] if len(body) > 500 else body
+            }
+        }
+        return await self._send_event(event)
+    
     def get_stats(self) -> Dict[str, Any]:
         """Get emission statistics."""
         return {
@@ -250,116 +284,9 @@ class EventEmitter:
 
 
 # ============================================================================
-# Global Singleton Instance (Optional)
+# Global Singleton Instance
 # ============================================================================
 
 # Create a global emitter instance that can be imported
 # Usage: from backend.event_emitter import emitter
 emitter = EventEmitter()
-
-
-# ============================================================================
-# Testing Functions
-# ============================================================================
-
-async def test_emitter():
-    """Test function to verify emitter works with structured events."""
-    print("Testing EventEmitter with Structured Events...")
-    print("=" * 60)
-    
-    test_emitter = EventEmitter()
-    
-    # Test workflow start
-    print("\n1. Testing workflow_start event...")
-    await test_emitter.emit_workflow_start(
-        repo_owner="kunalpanda",
-        repo_name="test_banking_app",
-        branch="main",
-        max_iterations=100
-    )
-    
-    # Test iteration start
-    print("2. Testing iteration_start event...")
-    await test_emitter.emit_iteration_start(1, 100)
-    
-    # Test Claude response
-    print("3. Testing claude_response event...")
-    await test_emitter.emit_claude_response(
-        iteration=1,
-        stop_reason="tool_use",
-        content=[
-            {"type": "text", "text": "I'll analyze the failing tests and create fixes."},
-            {"type": "tool_use", "id": "test_123", "name": "get_file_content", "input": {}}
-        ]
-    )
-    
-    # Test tool call
-    print("4. Testing tool_call event...")
-    await test_emitter.emit_tool_call(
-        iteration=1,
-        tool_name="get_file_content",
-        tool_input={"owner": "kunalpanda", "repo": "test_banking_app", "path": "web/tests/AccountServiceTest.java"},
-        tool_use_id="test_123"
-    )
-    
-    # Test tool result
-    print("5. Testing tool_result event...")
-    start = time.time()
-    await asyncio.sleep(0.1)  # Simulate execution time
-    execution_time = int((time.time() - start) * 1000)
-    
-    await test_emitter.emit_tool_result(
-        iteration=1,
-        tool_name="get_file_content",
-        tool_use_id="test_123",
-        success=True,
-        result={"content": "public class AccountServiceTest { ... }"},
-        execution_time_ms=execution_time
-    )
-    
-    # Test state update
-    print("6. Testing state_update event...")
-    await test_emitter.emit_state_update({
-        "branch": "fix/test-failures",
-        "active_branch": "fix/test-failures",
-        "iteration": 1,
-        "failed_tests": 6,
-        "phase": "fixing_tests"
-    })
-    
-    # Test log
-    print("7. Testing log event...")
-    await test_emitter.emit_log(
-        level="info",
-        message="Started fixing AccountServiceTest.java",
-        iteration=1
-    )
-    
-    # Test error
-    print("8. Testing error event...")
-    await test_emitter.emit_error(
-        error_type="ToolExecutionError",
-        error_message="Failed to connect to Jenkins",
-        iteration=1,
-        context={"tool": "trigger_build", "job_name": "test_banking_app"}
-    )
-    
-    # Test workflow complete
-    print("9. Testing workflow_complete event...")
-    await test_emitter.emit_workflow_complete(
-        total_iterations=1,
-        success=True,
-        reason="All tests passing"
-    )
-    
-    print("\n" + "=" * 60)
-    print("Emitter Statistics:")
-    print(json.dumps(test_emitter.get_stats(), indent=2))
-    print("=" * 60)
-    print("\n✅ Test complete!")
-    print("\nCheck your WebSocket server terminal to see the events!")
-
-
-if __name__ == "__main__":
-    # Run test
-    asyncio.run(test_emitter())

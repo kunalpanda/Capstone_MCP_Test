@@ -357,10 +357,77 @@ def enforce_branch(params: dict) -> dict:
 
     return params
 
+async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: str):
+    """
+    After workflow completion, search for PR from the branch and fetch its summary.
+    Returns PR details including body (Claude's summary) or None if no PR found.
+    """
+    try:
+        # Step 1: List open PRs for the repo to find PR number
+        # Note: GitHub MCP doesn't have list_prs, so we'll search by branch
+        # We can infer the PR was just created, so it should be the latest
+        
+        # Alternative: Track PR number when it's created
+        # For now, let's use the state to track it
+        
+        if not state.pr_number:
+            print("ℹ️  No PR number tracked - PR may not have been created")
+            return None
+        
+        print(f"\n{'='*60}")
+        print(f"📥 Fetching PR #{state.pr_number} summary...")
+        print(f"{'='*60}")
+        
+        # Fetch PR details using existing GitHub MCP tool
+        pr_details = await call_mcp_tool(
+            server_url=settings.GITHUB_MCP_URL,
+            method="tools/call",
+            name="get_pr_details",
+            params={
+                "owner": repo_owner,
+                "repo": repo_name,
+                "pr_number": state.pr_number
+            }
+        )
+        
+        if "result" not in pr_details:
+            print("❌ Failed to fetch PR details")
+            return None
+        
+        pr = pr_details["result"]
+        
+        # Display in CLI
+        print(f"\n📋 PULL REQUEST SUMMARY")
+        print(f"{'='*60}")
+        print(f"PR #{pr['number']}: {pr['title']}")
+        print(f"Branch: {pr['head_branch']} → {pr['base_branch']}")
+        print(f"URL: {pr['url']}")
+        print(f"\n{'-'*60}")
+        print(f"Claude's Summary:")
+        print(f"{'-'*60}")
+        print(pr['body'])
+        print(f"{'='*60}\n")
+        
+        # Emit to dashboard
+        await emitter.emit_pr_summary(
+            pr_number=pr['number'],
+            pr_url=pr['url'],
+            title=pr['title'],
+            body=pr['body'],
+            branch=pr['head_branch'],
+            iteration=state.iteration
+        )
+        
+        return pr
+        
+    except Exception as e:
+        print(f"⚠️  Could not fetch PR summary: {e}")
+        return None
+
 
 
 # =========================================================
-# FULL REPAIR + GENERATION WORKFLOW ENTRY
+# GENERATION WORKFLOW ENTRY
 # =========================================================
 async def run_full_test_repair_and_generation_workflow():
     """
@@ -598,6 +665,9 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                                 if branch_param:
                                     state.branch = branch_param
                                     print(f"🏗️ Build triggered for branch -> {state.branch}")
+                            elif tool_name == "create_pull_request" and "number" in result:
+                                state.pr_number = result.get("number")
+                                print(f"📝 PR #{state.pr_number} created - will fetch summary after workflow")
 
                             # SPECIAL HANDLING FOR CONSOLE OUTPUT
                             if tool_name == "get_console_output" and "log" in result:
@@ -629,7 +699,6 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                                         "summary": summary,
                                         "formatted_output": formatted_summary
                                     }
-
                             
                             result_str = json.dumps(result)
                             
@@ -695,6 +764,14 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
     print(f"Completed after {iteration} iterations")
     print(f"📊 Final message count: {len(messages)}")
     print(f"{'='*60}")
+
+    if state.pr_number:
+        pr_summary = await fetch_pr_summary_if_exists(
+            repo_owner="kunalpanda",
+            repo_name="test_banking_app",
+            branch=state.get_branch()
+        )
+        state.pr_summary = pr_summary
 
     await emitter.emit_workflow_complete(
     total_iterations=iteration,

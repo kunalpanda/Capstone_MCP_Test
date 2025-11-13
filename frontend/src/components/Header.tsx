@@ -4,9 +4,10 @@ import { OrchestratorState } from '../services/types';
 interface HeaderProps {
   state: OrchestratorState;
   isConnected: boolean;
+  onViewPR?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ state, isConnected }) => {
+export const Header: React.FC<HeaderProps> = ({ state, isConnected, onViewPR }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   
   useEffect(() => {
@@ -49,6 +50,14 @@ export const Header: React.FC<HeaderProps> = ({ state, isConnected }) => {
           <div className="stat-item">
             <span>⏱️ <strong>{formatTime(elapsedTime)}</strong></span>
           </div>
+          {state.status === 'complete' && state.prSummary && (
+            <button 
+              className="view-pr-button"
+              onClick={onViewPR}
+            >
+              📋 View PR Summary
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -8,7 +8,8 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
     maxIterations: 50,
     repo: '',
     branch: '',
-    recentActions: []
+    recentActions: [],
+    prSummary: null
   });
 
   useEffect(() => {
@@ -39,6 +40,18 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
 
         case 'workflow_complete':
           newState.status = latestEvent.data.success ? 'complete' : 'error';
+          break;
+        
+        case 'pr_summary':
+          newState.prSummary = {
+            pr_number: latestEvent.data.pr_number,
+            pr_url: latestEvent.data.pr_url,
+            title: latestEvent.data.title,
+            body: latestEvent.data.body,
+            branch: latestEvent.data.branch,
+            iteration: latestEvent.data.iteration,
+            body_preview: latestEvent.data.body_preview
+          };
           break;
 
         case 'tool_call':

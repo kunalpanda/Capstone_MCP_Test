@@ -87,6 +87,7 @@ async def get_pr_details(owner: str, repo: str, pr_number: int):
         return {
             "number": pr["number"],
             "title": pr["title"],
+            "body": pr.get("body", ""),  # ← ADD THIS LINE
             "author": pr["user"]["login"],
             "state": pr["state"],
             "merged": pr["merged"],
@@ -96,7 +97,6 @@ async def get_pr_details(owner: str, repo: str, pr_number: int):
             "updated_at": pr["updated_at"],
             "url": pr["html_url"],
         }
-
 
 # =========================================================
 # 4️⃣  get_pr_diff  →  Retrieve patch/diff text for a PR

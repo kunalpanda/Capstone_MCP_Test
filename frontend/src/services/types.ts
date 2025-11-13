@@ -8,6 +8,7 @@ export type EventType =
   | 'tool_result'
   | 'state_update'
   | 'workflow_complete'
+  | 'pr_summary'
   | 'error'
   | 'log';
 
@@ -67,6 +68,15 @@ export interface StateUpdateData {
   phase: string | null;
 }
 
+export interface PRSummaryData {
+  pr_number: number;
+  pr_url: string;
+  title: string;
+  body: string;
+  branch: string;
+  iteration: number;
+  body_preview: string;
+}
 
 export interface WorkflowCompleteData {
   total_iterations: number;
@@ -88,4 +98,5 @@ export interface OrchestratorState {
   repo: string;
   branch: string;
   recentActions: string[];
+  prSummary: PRSummaryData | null;
 }
