@@ -19,7 +19,7 @@ from backend.event_emitter import EventEmitter
 # ======================================
 ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
-PROMPT_FILE = "prompts/func_test.txt"
+PROMPT_FILE = "prompts/revised_prompt.txt"
 
 state = WorkflowState()
 emitter = EventEmitter()
@@ -473,6 +473,28 @@ async def run_full_test_repair_and_generation_workflow():
         build_status = build_info["result"]["status"]
 
         print(f"📄 Latest Jenkins build #{build_number} status: {build_status}")
+
+        # NEW: Wait for this specific build to finish before reading test results
+        print(f"⏳ Waiting for Jenkins build #{build_number} to complete...")
+
+        build_completion = await call_mcp_tool(
+            server_url=settings.JENKINS_MCP_URL,
+            method="tools/call",
+            name="wait_for_build_completion",
+            params={
+                "job_name": "test_banking_app",
+                "build_number": build_number,
+                "timeout_seconds": 600,
+                "poll_interval": 10,
+            },
+        )
+
+        if "result" not in build_completion:
+            raise RuntimeError(f"Unexpected response from wait_for_build_completion: {build_completion}")
+
+        # Update build_status based on the completed build
+        build_status = build_completion["result"]["result"]
+        print(f"📄 Jenkins build #{build_number} completed with status: {build_status}")
 
         # Step 3: Get test results
         test_results = await call_mcp_tool(
