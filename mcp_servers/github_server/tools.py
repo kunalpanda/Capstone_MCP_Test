@@ -319,20 +319,146 @@ async def create_pull_request(
         }
 
 # =========================================================
-# MCP tool list
+# MCP tool list - COMPLETE DEFINITIONS WITH SCHEMAS
 # =========================================================
 async def list_tools():
     return {
         "tools": [
-            {"name": "list_user_repos", "description": "List all repos for a user/org"},
-            {"name": "get_repo_info", "description": "Get metadata for a repository"},
-            {"name": "get_pr_details", "description": "Get pull request metadata"},
-            {"name": "get_pr_diff", "description": "Get patch diff of a pull request"},
-            {"name": "get_file_tree", "description": "List files in a branch recursively"},
-            {"name": "get_commit_diff", "description": "Compare two commits/branches"},
-            {"name": "get_file_content", "description": "Retrieve and decode file content"},
-            {"name": "create_branch", "description": "Create a new branch from an existing branch"},
-            {"name": "create_or_update_file", "description": "Create or update a file in the repository"},
-            {"name": "create_pull_request", "description": "Create a pull request"},
+            {
+                "name": "list_user_repos",
+                "description": "List all repositories for a user or organization",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "user": {"type": "string", "description": "GitHub username or organization name"}
+                    },
+                    "required": ["user"]
+                }
+            },
+            {
+                "name": "get_repo_info",
+                "description": "Get detailed metadata for a specific GitHub repository including stars, forks, description, and default branch.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner (username or org name)"},
+                        "repo": {"type": "string", "description": "Repository name"}
+                    },
+                    "required": ["owner", "repo"]
+                }
+            },
+            {
+                "name": "get_pr_details",
+                "description": "Get pull request metadata including title, author, status, and description",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "pr_number": {"type": "integer", "description": "Pull request number"}
+                    },
+                    "required": ["owner", "repo", "pr_number"]
+                }
+            },
+            {
+                "name": "get_pr_diff",
+                "description": "Retrieve patch/diff text for a pull request",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "pr_number": {"type": "integer", "description": "Pull request number"}
+                    },
+                    "required": ["owner", "repo", "pr_number"]
+                }
+            },
+            {
+                "name": "get_file_tree",
+                "description": "Recursively list all files in a repository branch. Returns file paths for the entire repository structure.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "ref": {"type": "string", "description": "Git reference (branch name, tag, or commit SHA). Default is 'main'", "default": "main"}
+                    },
+                    "required": ["owner", "repo"]
+                }
+            },
+            {
+                "name": "get_commit_diff",
+                "description": "Compare two commits or branches to see what changed",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "base": {"type": "string", "description": "Base commit/branch"},
+                        "head": {"type": "string", "description": "Head commit/branch to compare"}
+                    },
+                    "required": ["owner", "repo", "base", "head"]
+                }
+            },
+            {
+                "name": "get_file_content",
+                "description": "Read the content of a specific file from a repository. Returns decoded file content as text.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "path": {"type": "string", "description": "File path within the repository (e.g., 'src/main.py')"},
+                        "ref": {"type": "string", "description": "Git reference (branch, tag, or commit). Default is 'main'", "default": "main"}
+                    },
+                    "required": ["owner", "repo", "path"]
+                }
+            },
+            {
+                "name": "create_branch",
+                "description": "Create a new branch from an existing branch.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "branch_name": {"type": "string", "description": "Name for the new branch"},
+                        "from_branch": {"type": "string", "description": "Source branch to create from (default: main)", "default": "main"}
+                    },
+                    "required": ["owner", "repo", "branch_name"]
+                }
+            },
+            {
+                "name": "create_or_update_file",
+                "description": "Create a new file or update an existing file in the repository.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "path": {"type": "string", "description": "File path (e.g., 'web/tests/new_test.py')"},
+                        "content": {"type": "string", "description": "Complete file content"},
+                        "message": {"type": "string", "description": "Commit message"},
+                        "branch": {"type": "string", "description": "Branch name (default: main)", "default": "main"}
+                    },
+                    "required": ["owner", "repo", "path", "content", "message"]
+                }
+            },
+            {
+                "name": "create_pull_request",
+                "description": "Create a pull request to merge one branch into another.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {"type": "string", "description": "Repository owner"},
+                        "repo": {"type": "string", "description": "Repository name"},
+                        "title": {"type": "string", "description": "PR title"},
+                        "body": {"type": "string", "description": "PR description"},
+                        "head": {"type": "string", "description": "Source branch"},
+                        "base": {"type": "string", "description": "Target branch (default: main)", "default": "main"}
+                    },
+                    "required": ["owner", "repo", "title", "body", "head"]
+                }
+            }
         ]
     }

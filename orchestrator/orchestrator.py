@@ -160,171 +160,60 @@ def truncate_tool_results(messages: list, max_result_length: int = 3000) -> list
 # Flattened MCP Tool Definitions
 # ======================================
 # Add to TOOLS list
-TOOLS = [
-    # ========== GITHUB TOOLS - READ ==========
-    {
-        "name": "get_repo_info",
-        "description": "Get detailed metadata for a specific GitHub repository including stars, forks, description, and default branch.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string", "description": "Repository owner (username or org name)"},
-                "repo": {"type": "string", "description": "Repository name"}
-            },
-            "required": ["owner", "repo"]
-        }
-    },
-    {
-        "name": "get_file_tree",
-        "description": "Recursively list all files in a repository branch. Returns file paths for the entire repository structure.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string", "description": "Repository owner"},
-                "repo": {"type": "string", "description": "Repository name"},
-                "ref": {"type": "string", "description": "Git reference (branch name, tag, or commit SHA). Default is 'main'", "default": "main"}
-            },
-            "required": ["owner", "repo"]
-        }
-    },
-    {
-        "name": "get_file_content",
-        "description": "Read the content of a specific file from a repository. Returns decoded file content as text.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string", "description": "Repository owner"},
-                "repo": {"type": "string", "description": "Repository name"},
-                "path": {"type": "string", "description": "File path within the repository (e.g., 'src/main.py')"},
-                "ref": {"type": "string", "description": "Git reference (branch, tag, or commit). Default is 'main'", "default": "main"}
-            },
-            "required": ["owner", "repo", "path"]
-        }
-    },
+
+# ======================================
+# Dynamic Tool Discovery from MCP Servers
+# ======================================
+async def fetch_all_tools():
+    """
+    Dynamically fetch tool definitions from all MCP servers.
+    This replaces the hardcoded TOOLS list with dynamic discovery.
+    """
+    all_tools = []
     
-    # ========== GITHUB TOOLS - WRITE ==========
-    {
-        "name": "create_branch",
-        "description": "Create a new branch from an existing branch.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string", "description": "Repository owner"},
-                "repo": {"type": "string", "description": "Repository name"},
-                "branch_name": {"type": "string", "description": "Name for the new branch"},
-                "from_branch": {"type": "string", "description": "Source branch to create from (default: main)", "default": "main"}
-            },
-            "required": ["owner", "repo", "branch_name"]
-        }
-    },
-    {
-        "name": "create_or_update_file",
-        "description": "Create a new file or update an existing file in the repository.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string", "description": "Repository owner"},
-                "repo": {"type": "string", "description": "Repository name"},
-                "path": {"type": "string", "description": "File path (e.g., 'web/tests/new_test.py')"},
-                "content": {"type": "string", "description": "Complete file content"},
-                "message": {"type": "string", "description": "Commit message"},
-                "branch": {"type": "string", "description": "Branch name (default: main)", "default": "main"}
-            },
-            "required": ["owner", "repo", "path", "content", "message"]
-        }
-    },
-    {
-        "name": "create_pull_request",
-        "description": "Create a pull request to merge one branch into another.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "owner": {"type": "string", "description": "Repository owner"},
-                "repo": {"type": "string", "description": "Repository name"},
-                "title": {"type": "string", "description": "PR title"},
-                "body": {"type": "string", "description": "PR description"},
-                "head": {"type": "string", "description": "Source branch"},
-                "base": {"type": "string", "description": "Target branch (default: main)", "default": "main"}
-            },
-            "required": ["owner", "repo", "title", "body", "head"]
-        }
-    },
-    
-    # ========== JENKINS TOOLS ==========
-    {
-        "name": "get_build_info",
-        "description": "Get detailed information about the latest build of a Jenkins job including status, duration, and URL.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "job_name": {"type": "string", "description": "Name of the Jenkins job"}
-            },
-            "required": ["job_name"]
-        }
-    },
-    {
-        "name": "trigger_build",
-        "description": "Trigger a new Jenkins build for a job.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
-                "parameters": {"type": "object", "description": "Build parameters (optional)"}
-            },
-            "required": ["job_name"]
-        }
-    },
-    {
-        "name": "wait_for_build_completion",
-        "description": "Wait for a Jenkins build to complete and return its result.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
-                "build_number": {"type": "integer", "description": "Build number to wait for"},
-                "timeout_seconds": {"type": "integer", "description": "Max wait time (default: 600)", "default": 600},
-                "poll_interval": {"type": "integer", "description": "Seconds between polls (default: 10)", "default": 10}
-            },
-            "required": ["job_name", "build_number"]
-        }
-    },
-    {
-        "name": "get_test_results",
-        "description": "Get test results from a Jenkins build including failed tests details.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
-                "build_number": {"type": "integer", "description": "Build number (optional, uses lastBuild)"}
-            },
-            "required": ["job_name"]
-        }
-    },
-    {
-        "name": "get_console_output",
-        "description": "Retrieve the console log output for a specific Jenkins build. Useful for debugging failed builds.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "job_name": {"type": "string", "description": "Name of the Jenkins job"},
-                "build_number": {"type": "integer", "description": "Specific build number to retrieve logs for"}
-            },
-            "required": ["job_name", "build_number"]
-        }
-    }
-]
+    try:
+        # Fetch from GitHub MCP
+        print("🔧 Fetching tools from GitHub MCP server...")
+        github_response = await call_mcp_tool(
+            server_url=settings.GITHUB_MCP_URL,
+            method="tools/list"
+        )
+        if "result" in github_response and "tools" in github_response["result"]:
+            github_tools = github_response["result"]["tools"]
+            all_tools.extend(github_tools)
+            print(f"   ✅ Loaded {len(github_tools)} GitHub tools")
+        
+        # Fetch from Jenkins MCP
+        print("🔧 Fetching tools from Jenkins MCP server...")
+        jenkins_response = await call_mcp_tool(
+            server_url=settings.JENKINS_MCP_URL,
+            method="tools/list"
+        )
+        if "result" in jenkins_response and "tools" in jenkins_response["result"]:
+            jenkins_tools = jenkins_response["result"]["tools"]
+            all_tools.extend(jenkins_tools)
+            print(f"   ✅ Loaded {len(jenkins_tools)} Jenkins tools")
+        
+        print(f"📦 Total tools available: {len(all_tools)}\n")
+        return all_tools
+        
+    except Exception as e:
+        print(f"❌ Failed to fetch tools from MCP servers: {e}")
+        print("💡 Falling back to empty tool list - workflow may fail")
+        return []
 
 # ======================================
 # Tool Routing Helper
 # ======================================
 def get_server_for_tool(tool_name: str) -> str:
     github_tools = {
-        "get_repo_info", "get_file_tree", "get_file_content", "get_commit_diff",
+        "list_user_repos", "get_repo_info", "get_pr_details", "get_pr_diff",
+        "get_file_tree", "get_commit_diff", "get_file_content", 
         "create_branch", "create_or_update_file", "create_pull_request"
     }
     jenkins_tools = {
         "get_build_info", "trigger_build", "wait_for_build_completion",
-        "get_test_results", "get_console_output"
+        "get_test_results", "get_console_output", "get_queue_info"
     }
 
     if tool_name in github_tools:
@@ -532,8 +421,11 @@ async def run_full_test_repair_and_generation_workflow():
             "Proceed step by step via MCP tools.\n"
         )
 
+        print("\n🔧 Initializing tool discovery...")
+        tools = await fetch_all_tools()
+
         print("\n🧠 Launching full repair + generation workflow...\n")
-        await run_conversation_with_tools(prompt, max_iterations=50)
+        await run_conversation_with_tools(prompt, max_iterations=50, tools = tools)
 
     except Exception as e:
         print(f"❌ Workflow failed: {e}")
@@ -551,11 +443,23 @@ async def run_full_test_repair_and_generation_workflow():
 # ======================================
 # Main Orchestration Loop with Tool Execution
 # ======================================
-async def run_conversation_with_tools(initial_prompt: str, max_iterations: int = 50):
+async def run_conversation_with_tools(initial_prompt: str, max_iterations: int = 50, tools: list = None):
     """
     Run a multi-turn conversation with Claude, executing tools as requested.
     Now with message management to avoid rate limits.
+    
+    Args:
+        initial_prompt: The initial prompt to send to Claude
+        max_iterations: Maximum number of conversation turns
+        tools: List of tool definitions. If None, will be fetched dynamically.
     """
+    # Fetch tools dynamically if not provided
+    if tools is None:
+        print("🔄 Tools not provided - fetching from MCP servers...")
+        tools = await fetch_all_tools()
+        if not tools:
+            raise RuntimeError("Failed to fetch tools from MCP servers")
+    
     # Initial message
     messages = [
         {
@@ -598,7 +502,7 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
         # Call Claude with retry logic
         print(f"🤖 Calling Claude (iteration {iteration})...")
         try:
-            response = await call_claude(messages, tools=TOOLS, system=system_prompt)
+            response = await call_claude(messages, tools=tools, system=system_prompt)
         except Exception as e:
             print(f"❌ Failed to call Claude: {e}")
             print(f"💡 Consider reducing max_iterations or message history length")

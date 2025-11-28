@@ -62,7 +62,7 @@ default_branch: main
    - Missing edge case
    - Missing negative/exception flow
    - Cross-component interaction not covered
-   - Not reaching industry-accepted baseline (≈80% meaningful scenario coverage)
+   - Not reaching industry-accepted baseline (~80% meaningful scenario coverage)
 10. Write proposed test descriptions with reasoning.
 11. Create or update test files on the test branch.
 12. Verify updates with get_file_content.

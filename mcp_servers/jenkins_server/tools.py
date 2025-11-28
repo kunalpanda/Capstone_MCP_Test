@@ -237,19 +237,82 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
             "failed_tests": failed_tests[:20]  # Limit to first 20 failures
         }
 
-
 # =========================================================
-# MCP Tool Manifest
+# MCP Tool Manifest - COMPLETE DEFINITIONS WITH SCHEMAS
 # =========================================================
 async def list_tools():
-    """Enumerate available Jenkins tools."""
+    """Enumerate available Jenkins tools with complete schemas."""
     return {
         "tools": [
-            {"name": "trigger_build", "description": "Trigger a Jenkins job build"},
-            {"name": "get_queue_info", "description": "Fetch Jenkins queue details"},
-            {"name": "get_build_info", "description": "Fetch latest build info for a job"},
-            {"name": "get_console_output", "description": "Retrieve console output for a build"},
-            {"name": "wait_for_build_completion", "description": "Wait for a build to complete"},
-            {"name": "get_test_results", "description": "Get test results from a build"},
+            {
+                "name": "trigger_build",
+                "description": "Trigger a new Jenkins build for a job.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                        "parameters": {"type": "object", "description": "Build parameters (optional)"}
+                    },
+                    "required": ["job_name"]
+                }
+            },
+            {
+                "name": "get_queue_info",
+                "description": "Check the current Jenkins build queue",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "get_build_info",
+                "description": "Get detailed information about the latest build of a Jenkins job including status, duration, and URL.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_name": {"type": "string", "description": "Name of the Jenkins job"}
+                    },
+                    "required": ["job_name"]
+                }
+            },
+            {
+                "name": "get_console_output",
+                "description": "Retrieve the console log output for a specific Jenkins build. Useful for debugging failed builds.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                        "build_number": {"type": "integer", "description": "Specific build number to retrieve logs for"}
+                    },
+                    "required": ["job_name", "build_number"]
+                }
+            },
+            {
+                "name": "wait_for_build_completion",
+                "description": "Wait for a Jenkins build to complete and return its result.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                        "build_number": {"type": "integer", "description": "Build number to wait for"},
+                        "timeout_seconds": {"type": "integer", "description": "Max wait time (default: 600)", "default": 600},
+                        "poll_interval": {"type": "integer", "description": "Seconds between polls (default: 10)", "default": 10}
+                    },
+                    "required": ["job_name", "build_number"]
+                }
+            },
+            {
+                "name": "get_test_results",
+                "description": "Get test results from a Jenkins build including failed tests details.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_name": {"type": "string", "description": "Name of the Jenkins job"},
+                        "build_number": {"type": "integer", "description": "Build number (optional, uses lastBuild)"}
+                    },
+                    "required": ["job_name"]
+                }
+            }
         ]
     }
