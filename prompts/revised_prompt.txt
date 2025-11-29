@@ -26,10 +26,19 @@ and validate all results using Jenkins.
 </constraints>
 
 <repository_info>
-Owner: Kunalpanda
-repo_name: test_banking_app
-default_branch: main
+Owner: $OWNER
+repo_name: $REPO_NAME
+default_branch: $DEFAULT_BRANCH
 </repository_info>
+
+<branch_naming_convention>
+When creating a new test branch, use the following format:
+fix-tests-YYYYMMDD-HHMM
+
+Example: fix-tests-20250115-1430
+
+This ensures unique branch names and prevents conflicts with existing branches.
+</branch_naming_convention>
 
 <strict_fail_first_workflow>
 

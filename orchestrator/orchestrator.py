@@ -20,6 +20,8 @@ from backend.event_emitter import EventEmitter
 ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 PROMPT_FILE = "prompts/revised_prompt.txt"
+REPO_OWNER = "kunalpanda"
+REPO_NAME = "test_banking_app"
 
 state = WorkflowState()
 emitter = EventEmitter()
@@ -167,61 +169,56 @@ def truncate_tool_results(messages: list, max_result_length: int = 3000) -> list
 async def fetch_all_tools():
     """
     Dynamically fetch tool definitions from all MCP servers.
-    This replaces the hardcoded TOOLS list with dynamic discovery.
+    Returns tuple of (tools_list, tool_to_server_map)
     """
     all_tools = []
+    tool_to_server = {}  # Maps tool_name -> server_url
+    
+    # Define MCP servers to query
+    mcp_servers = [
+        {"name": "GitHub", "url": settings.GITHUB_MCP_URL},
+        {"name": "Jenkins", "url": settings.JENKINS_MCP_URL},
+    ]
     
     try:
-        # Fetch from GitHub MCP
-        print("🔧 Fetching tools from GitHub MCP server...")
-        github_response = await call_mcp_tool(
-            server_url=settings.GITHUB_MCP_URL,
-            method="tools/list"
-        )
-        if "result" in github_response and "tools" in github_response["result"]:
-            github_tools = github_response["result"]["tools"]
-            all_tools.extend(github_tools)
-            print(f"   ✅ Loaded {len(github_tools)} GitHub tools")
-        
-        # Fetch from Jenkins MCP
-        print("🔧 Fetching tools from Jenkins MCP server...")
-        jenkins_response = await call_mcp_tool(
-            server_url=settings.JENKINS_MCP_URL,
-            method="tools/list"
-        )
-        if "result" in jenkins_response and "tools" in jenkins_response["result"]:
-            jenkins_tools = jenkins_response["result"]["tools"]
-            all_tools.extend(jenkins_tools)
-            print(f"   ✅ Loaded {len(jenkins_tools)} Jenkins tools")
+        for server in mcp_servers:
+            server_name = server["name"]
+            server_url = server["url"]
+            
+            print(f"🔧 Fetching tools from {server_name} MCP server...")
+            
+            try:
+                response = await call_mcp_tool(
+                    server_url=server_url,
+                    method="tools/list"
+                )
+                
+                if "result" in response and "tools" in response["result"]:
+                    server_tools = response["result"]["tools"]
+                    all_tools.extend(server_tools)
+                    
+                    # Build routing map: tool_name -> server_url
+                    for tool in server_tools:
+                        tool_name = tool["name"]
+                        if tool_name in tool_to_server:
+                            print(f"   ⚠️  Warning: Tool '{tool_name}' provided by multiple servers")
+                        tool_to_server[tool_name] = server_url
+                    
+                    print(f"   ✅ Loaded {len(server_tools)} tools from {server_name}")
+                else:
+                    print(f"   ⚠️  No tools found in response from {server_name}")
+                    
+            except Exception as e:
+                print(f"   ❌ Failed to fetch tools from {server_name}: {e}")
+                continue
         
         print(f"📦 Total tools available: {len(all_tools)}\n")
-        return all_tools
+        return all_tools, tool_to_server
         
     except Exception as e:
         print(f"❌ Failed to fetch tools from MCP servers: {e}")
         print("💡 Falling back to empty tool list - workflow may fail")
-        return []
-
-# ======================================
-# Tool Routing Helper
-# ======================================
-def get_server_for_tool(tool_name: str) -> str:
-    github_tools = {
-        "list_user_repos", "get_repo_info", "get_pr_details", "get_pr_diff",
-        "get_file_tree", "get_commit_diff", "get_file_content", 
-        "create_branch", "create_or_update_file", "create_pull_request"
-    }
-    jenkins_tools = {
-        "get_build_info", "trigger_build", "wait_for_build_completion",
-        "get_test_results", "get_console_output", "get_queue_info"
-    }
-
-    if tool_name in github_tools:
-        return settings.GITHUB_MCP_URL
-    elif tool_name in jenkins_tools:
-        return settings.JENKINS_MCP_URL
-    else:
-        raise ValueError(f"Unknown tool: {tool_name}")
+        return [], {}
     
 
 def enforce_branch(params: dict) -> dict:
@@ -330,8 +327,8 @@ async def run_full_test_repair_and_generation_workflow():
     """
 
     await emitter.emit_workflow_start(
-        repo_owner="kunalpanda",
-        repo_name="test_banking_app",
+        repo_owner=REPO_OWNER,
+        repo_name=REPO_NAME,
         branch="main",
         max_iterations=50
     )
@@ -397,8 +394,9 @@ async def run_full_test_repair_and_generation_workflow():
         # Step 4: Prepare initial context for Claude
         base_prompt = open(PROMPT_FILE, "r", encoding="utf-8").read()
         context = {
-            "OWNER": "kunalpanda",
-            "REPO_NAME": "test_banking_app",
+            "OWNER": REPO_OWNER,
+            "REPO_NAME": REPO_NAME,
+            "DEFAULT_BRANCH": "main",  # Add this
             "BRANCH": "main",
             "INITIAL_BUILD": build_number,
             "INITIAL_STATUS": build_status,
@@ -422,10 +420,15 @@ async def run_full_test_repair_and_generation_workflow():
         )
 
         print("\n🔧 Initializing tool discovery...")
-        tools = await fetch_all_tools()
+        tools, tool_to_server = await fetch_all_tools()
 
         print("\n🧠 Launching full repair + generation workflow...\n")
-        await run_conversation_with_tools(prompt, max_iterations=50, tools = tools)
+        await run_conversation_with_tools(
+            prompt, 
+            max_iterations=50, 
+            tools=tools,
+            tool_to_server=tool_to_server  # Pass routing map
+        )
 
     except Exception as e:
         print(f"❌ Workflow failed: {e}")
@@ -443,7 +446,12 @@ async def run_full_test_repair_and_generation_workflow():
 # ======================================
 # Main Orchestration Loop with Tool Execution
 # ======================================
-async def run_conversation_with_tools(initial_prompt: str, max_iterations: int = 50, tools: list = None):
+async def run_conversation_with_tools(
+        initial_prompt: str, 
+        max_iterations: int = 50, 
+        tools: list = None, 
+        tool_to_server: dict = None
+        ):
     """
     Run a multi-turn conversation with Claude, executing tools as requested.
     Now with message management to avoid rate limits.
@@ -454,10 +462,10 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
         tools: List of tool definitions. If None, will be fetched dynamically.
     """
     # Fetch tools dynamically if not provided
-    if tools is None:
+    if tools is None or tool_to_server is None:
         print("🔄 Tools not provided - fetching from MCP servers...")
-        tools = await fetch_all_tools()
-        if not tools:
+        tools, tool_to_server = await fetch_all_tools()
+        if not tools or not tool_to_server:
             raise RuntimeError("Failed to fetch tools from MCP servers")
     
     # Initial message
@@ -561,8 +569,11 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
                     )
                     
                     try:
-                        # Route to appropriate MCP server
-                        server_url = get_server_for_tool(tool_name)
+                        # Route to appropriate MCP server dynamically
+                        server_url = tool_to_server.get(tool_name)
+                        
+                        if server_url is None:
+                            raise ValueError(f"Unknown tool '{tool_name}' - not provided by any MCP server")
                         
                         # Call the MCP server
                         mcp_response = await call_mcp_tool(
@@ -693,8 +704,8 @@ async def run_conversation_with_tools(initial_prompt: str, max_iterations: int =
 
     if state.pr_number:
         pr_summary = await fetch_pr_summary_if_exists(
-            repo_owner="kunalpanda",
-            repo_name="test_banking_app",
+            repo_owner=REPO_OWNER,
+            repo_name=REPO_NAME,
             branch=state.get_branch()
         )
         state.pr_summary = pr_summary

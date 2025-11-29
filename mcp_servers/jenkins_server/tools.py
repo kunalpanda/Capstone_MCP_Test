@@ -236,6 +236,83 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
             "duration": data.get("duration", 0),
             "failed_tests": failed_tests[:20]  # Limit to first 20 failures
         }
+    
+async def get_coverage_report(job_name: str, build_number: int = None):
+    """
+    Retrieve test coverage metrics from Jenkins JaCoCo plugin.
+    
+    Args:
+        job_name: Jenkins job name
+        build_number: Build number (optional, defaults to latest build)
+    
+    Returns:
+        Coverage percentages for line, branch, method, class, and instruction coverage
+    """
+    if build_number is None:
+        # Get latest build
+        url = f"{JENKINS_URL}/job/{job_name}/lastBuild/api/json"
+    else:
+        url = f"{JENKINS_URL}/job/{job_name}/{build_number}/api/json"
+    
+    async with httpx.AsyncClient() as client:
+        # Get build info to verify it exists
+        res = await client.get(url, auth=AUTH)
+        if res.status_code != 200:
+            raise RuntimeError(f"Failed to get build info: {res.status_code}")
+        
+        build_info = res.json()
+        actual_build_number = build_info["number"]
+        
+        # Try to get JaCoCo coverage data
+        coverage_url = f"{JENKINS_URL}/job/{job_name}/{actual_build_number}/jacoco/api/json?depth=2"
+        
+        coverage_res = await client.get(coverage_url, auth=AUTH)
+        
+        if coverage_res.status_code == 404:
+            return {
+                "job_name": job_name,
+                "build_number": actual_build_number,
+                "coverage_available": False,
+                "message": "No coverage data available. JaCoCo plugin may not be configured for this job."
+            }
+        
+        if coverage_res.status_code != 200:
+            raise RuntimeError(f"Failed to get coverage data: {coverage_res.status_code}: {coverage_res.text}")
+        
+        coverage_data = coverage_res.json()
+        
+        # Parse JaCoCo coverage format
+        def extract_percentage(metric):
+            """Extract percentage from JaCoCo metric format."""
+            if not metric:
+                return None
+            total = metric.get("total", 0)
+            covered = metric.get("covered", 0)
+            if total == 0:
+                return 0.0
+            return round((covered / total) * 100, 2)
+        
+        # Extract metrics
+        line_coverage = extract_percentage(coverage_data.get("lineCoverage"))
+        branch_coverage = extract_percentage(coverage_data.get("branchCoverage"))
+        method_coverage = extract_percentage(coverage_data.get("methodCoverage"))
+        class_coverage = extract_percentage(coverage_data.get("classCoverage"))
+        instruction_coverage = extract_percentage(coverage_data.get("instructionCoverage"))
+        
+        return {
+            "job_name": job_name,
+            "build_number": actual_build_number,
+            "coverage_available": True,
+            "coverage": {
+                "line": line_coverage,
+                "branch": branch_coverage,
+                "method": method_coverage,
+                "class": class_coverage,
+                "instruction": instruction_coverage
+            },
+            "summary": f"Line: {line_coverage}%, Branch: {branch_coverage}%, Method: {method_coverage}%",
+            "url": f"{JENKINS_URL}/job/{job_name}/{actual_build_number}/jacoco/"
+        }
 
 # =========================================================
 # MCP Tool Manifest - COMPLETE DEFINITIONS WITH SCHEMAS
@@ -310,6 +387,24 @@ async def list_tools():
                     "properties": {
                         "job_name": {"type": "string", "description": "Name of the Jenkins job"},
                         "build_number": {"type": "integer", "description": "Build number (optional, uses lastBuild)"}
+                    },
+                    "required": ["job_name"]
+                }
+            },
+            {
+                "name": "get_coverage_report",
+                "description": "Get test coverage metrics from Jenkins JaCoCo plugin for a specific build. Returns line, branch, method, class, and instruction coverage percentages.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "job_name": {
+                            "type": "string",
+                            "description": "Jenkins job name"
+                        },
+                        "build_number": {
+                            "type": "integer",
+                            "description": "Build number (optional, defaults to latest build)"
+                        }
                     },
                     "required": ["job_name"]
                 }
