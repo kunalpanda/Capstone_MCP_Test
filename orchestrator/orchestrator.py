@@ -10,7 +10,7 @@ from typing import Optional
 from orchestrator.mcp_client import call_mcp_tool
 from orchestrator.config import settings
 from orchestrator.state import WorkflowState
-from orchestrator.jenkins_utils import summarize_jenkins_console, format_jenkins_summary
+# jenkins_utils REMOVED - Claude now interprets raw console logs directly (language-agnostic)
 from backend.event_emitter import EventEmitter
 
 
@@ -30,8 +30,14 @@ emitter = EventEmitter()
 # ======================================
 # Claude 4.5 Tool-Use Function
 # ======================================
-async def call_claude(messages: list, tools: list = None, system: str = None, max_retries: int = 3):
-    """Send messages to Claude 4.5 with native tool-use support and rate limit handling."""
+async def call_claude(messages: list, tools: list = None, system: str = None, max_retries: int = 5):
+    """
+    Send messages to Claude 4.5 with native tool-use support.
+    
+    Handles:
+    - 429: Rate limit (waits for retry-after header)
+    - 529: Overloaded (exponential backoff)
+    """
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
@@ -59,29 +65,43 @@ async def call_claude(messages: list, tools: list = None, system: str = None, ma
                     headers=headers
                 )
                 
-                # Check for rate limit
+                # Handle rate limit (429)
                 if res.status_code == 429:
                     retry_after = int(res.headers.get("retry-after", 60))
-                    print(f"⚠️  Rate limit hit. Waiting {retry_after} seconds before retry {attempt + 1}/{max_retries}...")
+                    print(f"⚠️  Rate limit (429). Waiting {retry_after}s before retry {attempt + 1}/{max_retries}...")
                     
                     if attempt < max_retries - 1:
                         await asyncio.sleep(retry_after)
                         continue
                     else:
-                        print("❌ Max retries reached. Consider reducing message history.")
-                        raise Exception("Rate limit exceeded after retries")
+                        raise Exception("Rate limit exceeded after max retries")
                 
+                # Handle overloaded (529)
+                if res.status_code == 529:
+                    # Exponential backoff: 10s, 20s, 40s, 80s, 160s
+                    wait_time = 10 * (2 ** attempt)
+                    print(f"⚠️  API overloaded (529). Waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
+                    
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        raise Exception("API overloaded - max retries exceeded. Try again later.")
+                
+                # Handle other errors
                 if res.status_code != 200:
-                    print("❌ Claude API request failed.")
-                    print("Status code:", res.status_code)
-                    print("Response:", res.text)
+                    print(f"❌ Claude API request failed.")
+                    print(f"Status code: {res.status_code}")
+                    print(f"Response: {res.text}")
                     res.raise_for_status()
                     
                 return res.json()
                 
         except httpx.HTTPStatusError as e:
-            if e.response.status_code != 429 or attempt == max_retries - 1:
+            # Re-raise if not a retryable error or max retries reached
+            if e.response.status_code not in (429, 529) or attempt == max_retries - 1:
                 raise
+            # Otherwise continue to next retry attempt
 
 async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list:  # Increased from 3
     """Keep more recent context and include tool results in summary"""
@@ -127,9 +147,12 @@ async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list: 
     
     return [initial_message, summary_message] + recent_messages
 
-def truncate_tool_results(messages: list, max_result_length: int = 3000) -> list:
+def truncate_tool_results(messages: list, max_result_length: int = 55000) -> list:
     """
     Truncate large tool results to prevent token overflow.
+    
+    Note: Increased to 55k to accommodate 50k console logs from Jenkins.
+    Claude can handle ~100k tokens per request, so 55k chars (~14k tokens) is safe.
     """
     truncated_messages = []
     
@@ -606,36 +629,17 @@ async def run_conversation_with_tools(
                                 state.pr_number = result.get("number")
                                 print(f"📝 PR #{state.pr_number} created - will fetch summary after workflow")
 
-                            # SPECIAL HANDLING FOR CONSOLE OUTPUT
+                            # CONSOLE OUTPUT: Pass raw log directly to Claude (language-agnostic)
+                            # The Jenkins MCP server now handles smart truncation at 50k chars
+                            # Claude interprets the raw output - no regex parsing needed
                             if tool_name == "get_console_output" and "log" in result:
-                                raw_log = result["log"]
-
-                                # === Enhanced handling for compilation errors ===
-                                summary = summarize_jenkins_console(raw_log)
-
-                                # If this was a compilation or build failure, send the real log instead of the summary
-                                if summary.get("error_type") == "compilation_error":
-                                    print("⚠️ Detected compilation failure — sending full console log to Claude.")
-                                    # Truncate for safety, avoid sending multi-MB logs
-                                    truncated_log = raw_log[:8000]
-                                    result = {
-                                        "job_name": result.get("job_name"),
-                                        "build_number": result.get("build_number"),
-                                        "log_excerpt": truncated_log,
-                                        "note": "Raw log excerpt provided due to compilation failure."
-                                    }
-
-                                else:
-                                    # Normal summarization path
-                                    formatted_summary = format_jenkins_summary(summary)
-                                    print("\n📋 JENKINS CONSOLE SUMMARY:")
-                                    print(formatted_summary)
-                                    result = {
-                                        "job_name": result.get("job_name"),
-                                        "build_number": result.get("build_number"),
-                                        "summary": summary,
-                                        "formatted_output": formatted_summary
-                                    }
+                                log_length = result.get("total_length", len(result["log"]))
+                                truncated = result.get("truncated", False)
+                                
+                                print(f"\n📋 JENKINS CONSOLE LOG:")
+                                print(f"   Total length: {log_length:,} chars")
+                                print(f"   Truncated: {truncated}")
+                                print(f"   Note: Raw log passed to Claude for language-agnostic analysis")
                             
                             result_str = json.dumps(result)
                             

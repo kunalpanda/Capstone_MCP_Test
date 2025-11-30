@@ -97,14 +97,69 @@ async def get_build_info(job_name: str):
 # =========================================================
 # 4️⃣ get_console_output → Retrieve console log of a build
 # =========================================================
+def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
+    """
+    Intelligently truncate console logs to preserve the most useful information.
+    
+    Strategy:
+    - Keep head (20%) for build setup, checkout info
+    - Keep tail (80%) for test results, errors, and summary
+    
+    This is language-agnostic - Claude interprets the raw output.
+    """
+    total_length = len(log)
+    
+    if total_length <= max_chars:
+        return {
+            "log": log,
+            "truncated": False,
+            "total_length": total_length
+        }
+    
+    # 20% head (checkout, setup), 80% tail (test results, errors)
+    head_size = max_chars // 5      # 10k chars - setup/checkout
+    tail_size = (max_chars * 4) // 5  # 40k chars - test results, summary
+    
+    head = log[:head_size]
+    tail = log[-tail_size:]
+    
+    omitted = total_length - max_chars
+    truncation_notice = f"\n\n{'='*60}\n[... {omitted:,} characters omitted ...]\n{'='*60}\n\n"
+    
+    return {
+        "log": head + truncation_notice + tail,
+        "truncated": True,
+        "total_length": total_length,
+        "omitted_chars": omitted,
+        "hint": "Test results and errors are typically at the end of the log. The LLM should analyze this raw output directly."
+    }
+
+
 async def get_console_output(job_name: str, build_number: int):
-    """Fetch Jenkins console log for a specific build."""
+    """
+    Fetch Jenkins console log for a specific build.
+    
+    Returns raw log with smart truncation (50k char limit).
+    The LLM interprets the output directly - no regex parsing.
+    This approach is language-agnostic and works for any test framework.
+    """
     url = f"{JENKINS_URL}/job/{job_name}/{build_number}/logText/progressiveText"
     async with httpx.AsyncClient(auth=AUTH) as client:
         res = await client.get(url)
         if res.status_code != 200:
             raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
-    return {"job_name": job_name, "build_number": build_number, "log": res.text[:10000]}  # truncate large logs
+    
+    # Smart truncation preserving head (setup) + tail (results)
+    truncation_result = smart_truncate_log(res.text, max_chars=50000)
+    
+    return {
+        "job_name": job_name,
+        "build_number": build_number,
+        "log": truncation_result["log"],
+        "total_length": truncation_result["total_length"],
+        "truncated": truncation_result["truncated"],
+        "note": "Raw console log provided. Analyze for test results, failures, errors, and coverage information."
+    }
 
 import asyncio
 from typing import Optional
