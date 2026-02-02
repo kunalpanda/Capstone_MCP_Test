@@ -61,11 +61,19 @@ export interface ToolResultData {
   execution_time_ms: number | null;
 }
 
+export interface CoverageMetrics {
+  line?: number;
+  branch?: number;
+  method?: number;
+}
+
 export interface StateUpdateData {
   branch: string | null;
   commit_sha: string | null;
   iteration: number | null;
   phase: string | null;
+  current_coverage?: CoverageMetrics;
+  target_coverage?: CoverageMetrics;
 }
 
 export interface PRSummaryData {
@@ -99,4 +107,6 @@ export interface OrchestratorState {
   branch: string;
   recentActions: string[];
   prSummary: PRSummaryData | null;
+  currentCoverage: CoverageMetrics | null;
+  targetCoverage: CoverageMetrics | null;
 }

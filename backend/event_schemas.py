@@ -157,6 +157,8 @@ class StateUpdateEvent:
     commit_sha: Optional[str] = None
     iteration: Optional[int] = None
     phase: Optional[str] = None
+    current_coverage: Optional[Dict[str, float]] = None
+    target_coverage: Optional[Dict[str, int]] = None
     timestamp: str = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -167,10 +169,11 @@ class StateUpdateEvent:
                 "branch": self.branch,
                 "commit_sha": self.commit_sha,
                 "iteration": self.iteration,
-                "phase": self.phase
+                "phase": self.phase,
+                "current_coverage": self.current_coverage,
+                "target_coverage": self.target_coverage
             }
         }
-
 
 @dataclass
 class WorkflowStartEvent:
@@ -360,10 +363,11 @@ def create_state_update(state_dict: Dict[str, Any]) -> Dict[str, Any]:
         branch=state_dict.get("branch") or state_dict.get("active_branch"),
         commit_sha=state_dict.get("commit"),
         iteration=state_dict.get("iteration"),
-        phase=state_dict.get("phase")
+        phase=state_dict.get("phase"),
+        current_coverage=state_dict.get("current_coverage"),
+        target_coverage=state_dict.get("target_coverage")
     )
     return event.to_dict()
-
 
 def create_workflow_start(
     repo_owner: str,

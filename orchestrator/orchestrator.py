@@ -332,6 +332,51 @@ async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: st
     except Exception as e:
         print(f"⚠️  Could not fetch PR summary: {e}")
         return None
+    
+async def fetch_baseline_coverage(job_name: str) -> dict:
+    """
+    Fetch initial coverage report from Jenkins to establish baseline.
+    
+    Returns:
+        Dictionary with coverage data or empty dict if unavailable
+    """
+    try:
+        print(f"\n{'='*60}")
+        print("📊 FETCHING BASELINE COVERAGE")
+        print(f"{'='*60}")
+        
+        # Call Jenkins MCP to get coverage
+        result = await call_mcp_tool(
+            server_url=settings.JENKINS_MCP_URL,
+            method="tools/call",
+            name="get_coverage_report",
+            params={"job_name": job_name}
+        )
+        
+        if "result" in result:
+            coverage_result = result["result"]
+            
+            if coverage_result.get("coverage_available"):
+                coverage = coverage_result.get("coverage", {})
+                print(f"✅ Baseline coverage retrieved:")
+                print(f"   Line: {coverage.get('line', 'N/A')}%")
+                print(f"   Branch: {coverage.get('branch', 'N/A')}%")
+                print(f"   Method: {coverage.get('method', 'N/A')}%")
+                print(f"{'='*60}\n")
+                return coverage
+            else:
+                print(f"⚠️  {coverage_result.get('message', 'No coverage data available')}")
+                print(f"{'='*60}\n")
+                return {}
+        else:
+            print(f"⚠️  Failed to fetch coverage: {result}")
+            print(f"{'='*60}\n")
+            return {}
+            
+    except Exception as e:
+        print(f"❌ Error fetching baseline coverage: {e}")
+        print(f"{'='*60}\n")
+        return {}
 
 
 
@@ -355,6 +400,16 @@ async def run_full_test_repair_and_generation_workflow():
         branch="main",
         max_iterations=50
     )
+
+    await emitter.emit_workflow_start(
+        repo_owner=REPO_OWNER,
+        repo_name=REPO_NAME,
+        branch="main",
+        max_iterations=50
+    )
+
+    # Initialize baseline_coverage variable BEFORE try block
+    baseline_coverage = {}
 
     print("🚦 Running initial Jenkins build on main branch to detect failing tests...")
     try:
@@ -419,11 +474,19 @@ async def run_full_test_repair_and_generation_workflow():
         context = {
             "OWNER": REPO_OWNER,
             "REPO_NAME": REPO_NAME,
-            "DEFAULT_BRANCH": "main",  # Add this
+            "DEFAULT_BRANCH": "main",
             "BRANCH": "main",
             "INITIAL_BUILD": build_number,
             "INITIAL_STATUS": build_status,
-            "TEST_RESULTS": json.dumps(test_results["result"], indent=2) if "result" in test_results else "{}"
+            "TEST_RESULTS": json.dumps(test_results["result"], indent=2) if "result" in test_results else "{}",
+            
+            # Coverage metrics
+            "TARGET_LINE_COVERAGE": settings.TARGET_LINE_COVERAGE,
+            "TARGET_BRANCH_COVERAGE": settings.TARGET_BRANCH_COVERAGE,
+            "TARGET_METHOD_COVERAGE": settings.TARGET_METHOD_COVERAGE,
+            "BASELINE_LINE_COVERAGE": baseline_coverage.get("line", "N/A") if baseline_coverage else "N/A",
+            "BASELINE_BRANCH_COVERAGE": baseline_coverage.get("branch", "N/A") if baseline_coverage else "N/A",
+            "BASELINE_METHOD_COVERAGE": baseline_coverage.get("method", "N/A") if baseline_coverage else "N/A",
         }
 
         # Build the final prompt
@@ -444,6 +507,25 @@ async def run_full_test_repair_and_generation_workflow():
 
         print("\n🔧 Initializing tool discovery...")
         tools, tool_to_server = await fetch_all_tools()
+
+        # Initialize target coverage from config
+        state.target_coverage = {
+            "line": settings.TARGET_LINE_COVERAGE,
+            "branch": settings.TARGET_BRANCH_COVERAGE,
+            "method": settings.TARGET_METHOD_COVERAGE
+        }
+        print(f"🎯 Coverage targets set: Line={settings.TARGET_LINE_COVERAGE}%, "
+            f"Branch={settings.TARGET_BRANCH_COVERAGE}%, "
+            f"Method={settings.TARGET_METHOD_COVERAGE}%")
+        
+        # Fetch baseline coverage from Jenkins
+        baseline_coverage = await fetch_baseline_coverage(job_name="test_banking_app")
+        if baseline_coverage:
+            state.update_coverage(baseline_coverage)
+            print(state.get_coverage_summary())
+            
+        # Emit initial coverage to frontend
+        await emitter.emit_state_update(state.summary())
 
         print("\n🧠 Launching full repair + generation workflow...\n")
         await run_conversation_with_tools(
@@ -640,6 +722,19 @@ async def run_conversation_with_tools(
                                 print(f"   Total length: {log_length:,} chars")
                                 print(f"   Truncated: {truncated}")
                                 print(f"   Note: Raw log passed to Claude for language-agnostic analysis")
+
+                            # COVERAGE TRACKING: Update state when Claude checks coverage
+                            if tool_name == "get_coverage_report" and "coverage" in result:
+                                if result.get("coverage_available"):
+                                    coverage = result.get("coverage", {})
+                                    state.update_coverage(coverage)
+                                    print(f"\n📊 COVERAGE UPDATE:")
+                                    print(state.get_coverage_summary())
+                                    
+                                    # Emit updated coverage to frontend
+                                    await emitter.emit_state_update(state.summary())
+                                else:
+                                    print(f"\n⚠️  Coverage not available: {result.get('message', 'Unknown reason')}")
                             
                             result_str = json.dumps(result)
                             

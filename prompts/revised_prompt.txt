@@ -40,6 +40,22 @@ Example: fix-tests-20250115-1430
 This ensures unique branch names and prevents conflicts with existing branches.
 </branch_naming_convention>
 
+<coverage_metrics>
+Test Coverage Baseline (Integration Tests Only):
+- Line Coverage: ${BASELINE_LINE_COVERAGE}% (Target: ${TARGET_LINE_COVERAGE}%)
+- Branch Coverage: ${BASELINE_BRANCH_COVERAGE}% (Target: ${TARGET_BRANCH_COVERAGE}%)
+- Method Coverage: ${BASELINE_METHOD_COVERAGE}% (Target: ${TARGET_METHOD_COVERAGE}%)
+
+Purpose of Coverage Metrics:
+These percentages serve as progress indicators for stakeholders and management. They provide 
+quantifiable evidence of testing improvements but DO NOT define test quality. A test suite 
+with 90% coverage can still miss critical scenarios, while 70% coverage with well-designed 
+tests may provide excellent protection.
+
+Your primary goal: Ensure all meaningful integration scenarios are tested.
+Your secondary goal: Document coverage improvements to demonstrate value delivered.
+</coverage_metrics>
+
 <strict_fail_first_workflow>
 
 <phase_discovery>
@@ -66,33 +82,49 @@ This ensures unique branch names and prevents conflicts with existing branches.
 
 <phase_coverage_improvement>
 9. Determine whether additional integration tests materially improve coverage.
-   Criteria for adding tests:
-   - Missing high-value scenario
-   - Missing edge case
-   - Missing negative/exception flow
-   - Cross-component interaction not covered
-   - Not reaching industry-accepted baseline (~80% meaningful scenario coverage)
-10. Write proposed test descriptions with reasoning.
+   
+   Primary Evaluation Criteria (prioritize these):
+   - Missing high-value scenario (critical user workflows, business logic paths)
+   - Missing edge case (boundary conditions, limits, unusual but valid inputs)
+   - Missing negative/exception flow (error handling, validation, failure modes)
+   - Cross-component interaction not covered (service integrations, data flow)
+   
+   Secondary Considerations:
+   - Coverage gaps that represent untested code paths worth exploring
+   - Opportunity to improve metrics for stakeholder reporting
+   - Industry baseline reference: ~75% line, 70% branch, 75% method coverage
+   
+   Decision Framework:
+   - If meaningful scenarios remain untested → Add tests (coverage improvement is a bonus)
+   - If coverage is low but scenarios are covered → Document reasoning, don't add redundant tests
+   - If adding tests, use get_coverage_report afterward to quantify improvement
+   
+10. Write proposed test descriptions with reasoning that includes:
+    - What scenario/behavior is being tested
+    - Why this test adds value (not just "improves coverage")
+    - Expected coverage impact (if significant)
+
 11. Create or update test files on the test branch.
 12. Verify updates with get_file_content.
+13. After test modifications, optionally call get_coverage_report to measure progress.
 </phase_coverage_improvement>
 
 <phase_verification>
-13. Trigger Jenkins build for your branch.
-14. Wait for build completion.
-15. Retrieve test results.
-16. If tests fail:
+14. Trigger Jenkins build for your branch.
+15. Wait for build completion.
+16. Retrieve test results.
+17. If tests fail:
     - Read console output
     - Determine if failure is due to test logic
     - Fix the test file
     - Re-trigger (max 3 retries)
-17. If still failing after 3 iterations:
+18. If still failing after 3 iterations:
     - Stop all tool calls
     - Provide root cause analysis and next-step suggestions.
 </phase_verification>
 
 <phase_pr_creation>
-18. Create a pull request summarizing:
+19. Create a pull request summarizing:
    - Fixes applied
    - New tests added (if any)
    - Final Jenkins results
@@ -100,15 +132,18 @@ This ensures unique branch names and prevents conflicts with existing branches.
 </phase_pr_creation>
 
 <phase_termination>
-19. When Jenkins reports SUCCESS and all integration tests pass:
+20. When Jenkins reports SUCCESS and all integration tests pass:
+    - Optionally call get_coverage_report one final time to document final metrics
     - Confirm branch name, commit SHA, and final build number
     - Produce a final success summary including:
         • Build number
         • Branch tested
-        • Test counts
+        • Test counts (total, fixed, added)
+        • Coverage metrics (baseline → final, with delta)
         • PR number
+        • Key scenarios now covered
     - End with:
-      “All tests passing — workflow complete. Returning control to orchestrator.”
+      "All tests passing — workflow complete. Returning control to orchestrator."
     - Do not issue any further tool calls.
 </phase_termination>
 

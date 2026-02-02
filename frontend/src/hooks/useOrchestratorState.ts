@@ -9,7 +9,9 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
     repo: '',
     branch: '',
     recentActions: [],
-    prSummary: null
+    prSummary: null,
+    currentCoverage: null,
+    targetCoverage: null
   });
 
   useEffect(() => {
@@ -35,6 +37,12 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
         case 'state_update':
           if (latestEvent.data.branch) {
             newState.branch = latestEvent.data.branch;
+          }
+          if (latestEvent.data.current_coverage) {
+            newState.currentCoverage = latestEvent.data.current_coverage;
+          }
+          if (latestEvent.data.target_coverage) {
+            newState.targetCoverage = latestEvent.data.target_coverage;
           }
           break;
 
