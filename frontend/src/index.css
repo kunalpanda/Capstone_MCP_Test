@@ -1,20 +1,19 @@
-/* index.css - Global styles and CSS reset */
+/* src/index.css */
+/* Application-specific overrides and additions */
+/* Base styles are in styles/variables.css and styles/globals.css */
 
+/* Ensure smooth theme transitions on body */
 body {
-  margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #0f172a;
-  color: #e2e8f0;
+  transition: 
+    background-color var(--transition-theme),
+    color var(--transition-theme);
 }
 
-code {
-  font-family: 'Courier New', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-}
-
+/* Root app container */
 #root {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }

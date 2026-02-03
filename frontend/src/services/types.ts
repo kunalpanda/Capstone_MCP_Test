@@ -79,12 +79,19 @@ export interface StateUpdateData {
 export interface PRSummaryData {
   pr_number: number;
   pr_url: string;
+  html_url?: string;
   title: string;
   body: string;
   branch: string;
+  head_branch?: string;
+  base_branch?: string;
   iteration: number;
   body_preview: string;
+  created_at?: string;
 }
+
+// Alias for component compatibility
+export type PRSummary = PRSummaryData;
 
 export interface WorkflowCompleteData {
   total_iterations: number;

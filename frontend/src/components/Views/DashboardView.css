@@ -1,0 +1,19 @@
+/* src/components/Views/DashboardView.css */
+/* Dashboard view styling */
+
+.dashboard-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Special sizing for event stream widget */
+.widget--event-stream {
+  min-height: 350px;
+}
+
+.widget--event-stream .widget__content {
+  display: flex;
+  flex-direction: column;
+}

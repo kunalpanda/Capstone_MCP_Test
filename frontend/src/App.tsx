@@ -1,82 +1,115 @@
+// src/App.tsx
+// Main application with redesigned enterprise UI
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useOrchestratorState } from './hooks/useOrchestratorState';
-import { Header } from './components/Header';
-import { OutputStream } from './components/OutputStream';
-import { StatePanel } from './components/StatePanel';
-import { PRSummaryModal } from './components/PRSummaryModal';
-import './App.css';
+import { useTheme } from './hooks/useTheme';
+import { Layout } from './components/Layout';
+import { DashboardView, TableView } from './components/Views';
+import { PRSummaryModal } from './components/PRSummaryModal/PRSummaryModal';
+import type { ViewMode } from './components/Layout/Sidebar';
 
 function App() {
   const { isConnected, events } = useWebSocket();
   const state = useOrchestratorState(events);
+  const { theme, toggleTheme } = useTheme();
+  
+  const [activeView, setActiveView] = useState<ViewMode>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const hasShownModal = useRef(false);
   
-  // Debug: Log all events
+  // Debug: Log all events (keep for development)
   useEffect(() => {
-    console.log('📊 Total events received:', events.length);
-    if (events.length > 0) {
-      const latestEvent = events[events.length - 1];
-      console.log('📨 Latest event:', latestEvent.type, latestEvent.data);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📊 Total events received:', events.length);
+      if (events.length > 0) {
+        const latestEvent = events[events.length - 1];
+        console.log('📨 Latest event:', latestEvent.type, latestEvent.data);
+      }
     }
   }, [events]);
   
-  // Debug: Log state changes
+  // Debug: Log state changes (keep for development)
   useEffect(() => {
-    console.log('🔄 State update:', {
-      status: state.status,
-      hasPrSummary: !!state.prSummary,
-      prNumber: state.prSummary?.pr_number,
-      isModalOpen,
-      hasShownModal: hasShownModal.current
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 State update:', {
+        status: state.status,
+        hasPrSummary: !!state.prSummary,
+        prNumber: state.prSummary?.pr_number,
+        isModalOpen,
+        hasShownModal: hasShownModal.current
+      });
+    }
   }, [state.status, state.prSummary, isModalOpen]);
   
   // Auto-open modal when workflow completes with PR summary
   useEffect(() => {
-    console.log('🎯 Modal effect check:', {
-      status: state.status,
-      hasPrSummary: !!state.prSummary,
-      hasShownModal: hasShownModal.current
-    });
-    
     if (state.status === 'complete' && state.prSummary && !hasShownModal.current) {
-      console.log('✅ Opening modal!');
       setIsModalOpen(true);
       hasShownModal.current = true;
     }
   }, [state.status, state.prSummary]);
+
+  // Reset modal flag when a new workflow starts
+  useEffect(() => {
+    if (state.status === 'running' && state.currentIteration === 1) {
+      hasShownModal.current = false;
+    }
+  }, [state.status, state.currentIteration]);
   
   const handleViewPR = () => {
-    console.log('👆 View PR button clicked');
-    setIsModalOpen(true);
+    if (state.prSummary) {
+      setIsModalOpen(true);
+    }
   };
   
   const handleCloseModal = () => {
-    console.log('❌ Closing modal');
     setIsModalOpen(false);
+  };
+
+  const handleViewChange = (view: ViewMode) => {
+    setActiveView(view);
+  };
+
+  // Render the active view
+  const renderView = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return <DashboardView state={state} events={events} />;
+      case 'table':
+        return <TableView events={events} />;
+      case 'details':
+        // Details view could show expanded PR info or selected event details
+        // For now, redirect to dashboard
+        return <DashboardView state={state} events={events} />;
+      default:
+        return <DashboardView state={state} events={events} />;
+    }
   };
   
   return (
-    <div className="dashboard">
-      <Header 
-        state={state} 
+    <>
+      <Layout
+        state={state}
         isConnected={isConnected}
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        activeView={activeView}
+        onViewChange={handleViewChange}
         onViewPR={handleViewPR}
-      />
-      
-      <div className="main-content">
-        <OutputStream events={events} />
-        <StatePanel state={state} />
-      </div>
+      >
+        {renderView()}
+      </Layout>
 
-      <PRSummaryModal 
-        summary={state.prSummary}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
-    </div>
+      {state.prSummary && (
+        <PRSummaryModal 
+          prSummary={state.prSummary}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
+    </>
   );
 }
 

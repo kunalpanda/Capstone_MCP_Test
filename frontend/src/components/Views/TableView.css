@@ -1,0 +1,15 @@
+/* src/components/Views/TableView.css */
+/* Table view styling */
+
+.table-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.table-view__main {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--space-4);
+}

@@ -1,0 +1,43 @@
+/* src/components/Layout/Layout.css */
+/* Main layout structure styling */
+
+.layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-primary);
+  transition: background-color var(--transition-theme);
+}
+
+.layout__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.layout__content {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  position: relative;
+}
+
+/* Smooth transition when sidebar collapses */
+.layout__main {
+  transition: margin-left var(--transition-base);
+}
+
+/* Content padding */
+.layout__content {
+  padding: var(--space-4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .layout__content {
+    padding: var(--space-3);
+  }
+}
