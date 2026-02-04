@@ -3,3 +3,4 @@
 
 export { DashboardView } from './DashboardView';
 export { TableView } from './TableView';
+export { LogsView } from './LogsView';

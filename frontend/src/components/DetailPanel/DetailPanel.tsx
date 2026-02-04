@@ -110,8 +110,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       }
     });
 
+    // Sort chronologically (oldest first, newest at bottom)
     return logEntries.sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
   }, [events]);
 
@@ -188,7 +189,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       }
     });
 
-    return changes;
+    // Sort chronologically (oldest first, newest at bottom)
+    return changes.sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
   }, [events]);
 
   // Filter logs

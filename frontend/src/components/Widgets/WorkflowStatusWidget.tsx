@@ -15,30 +15,41 @@ import './WorkflowStatusWidget.css';
 
 interface WorkflowStatusWidgetProps {
   state: OrchestratorState;
+  workflowStartTime: number | null;
 }
 
-export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({ state }) => {
-  const [elapsedTime, setElapsedTime] = useState(0);
+export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({ 
+  state, 
+  workflowStartTime 
+}) => {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Timer for running workflows
+  // Calculate elapsed time from start time
   useEffect(() => {
+    // If no start time or not running/complete, don't update
+    if (!workflowStartTime) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    // Calculate initial elapsed time
+    const calculateElapsed = () => {
+      return Math.floor((Date.now() - workflowStartTime) / 1000);
+    };
+
+    setElapsedSeconds(calculateElapsed());
+
+    // Only keep updating if workflow is running
     if (state.status !== 'running') {
       return;
     }
 
     const interval = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
+      setElapsedSeconds(calculateElapsed());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [state.status]);
-
-  // Reset timer when workflow starts
-  useEffect(() => {
-    if (state.status === 'running' && state.currentIteration === 1) {
-      setElapsedTime(0);
-    }
-  }, [state.status, state.currentIteration]);
+  }, [workflowStartTime, state.status]);
 
   const formatTime = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
@@ -154,7 +165,7 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({ stat
           </div>
           <div className="workflow-status__timer">
             <span className="workflow-status__timer-value">
-              {formatTime(elapsedTime)}
+              {formatTime(elapsedSeconds)}
             </span>
             {state.status === 'running' && (
               <span className="workflow-status__timer-indicator" />
@@ -168,7 +179,7 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({ stat
         <div className="workflow-status__stats">
           <div className="workflow-status__stat">
             <span className="workflow-status__stat-value">
-              {state.recentActions.length}
+              {state.totalActions}
             </span>
             <span className="workflow-status__stat-label">Actions</span>
           </div>

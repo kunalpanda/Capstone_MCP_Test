@@ -24,6 +24,7 @@ import './DashboardView.css';
 interface DashboardViewProps {
   state: OrchestratorState;
   events: BaseEvent[];
+  workflowStartTime: number | null;
 }
 
 // Widget icon mapping
@@ -35,7 +36,7 @@ const WIDGET_ICONS: Record<string, React.ReactNode> = {
   'event-stream': <Radio size={16} />,
 };
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ state, events }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ state, events, workflowStartTime }) => {
   const {
     visibleWidgets,
     layout,
@@ -50,7 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ state, events }) =
   const renderWidgetContent = (widgetId: string) => {
     switch (widgetId) {
       case 'workflow-status':
-        return <WorkflowStatusWidget state={state} />;
+        return <WorkflowStatusWidget state={state} workflowStartTime={workflowStartTime} />;
       case 'coverage':
         return (
           <CoverageWidget
@@ -61,7 +62,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ state, events }) =
       case 'repository':
         return <RepositoryWidget state={state} />;
       case 'recent-actions':
-        return <RecentActionsWidget actions={state.recentActions} />;
+        return <RecentActionsWidget actions={state.recentActions} totalActions={state.totalActions} />;
       case 'event-stream':
         return <EventStreamWidget events={events} />;
       default:

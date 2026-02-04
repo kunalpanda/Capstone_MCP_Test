@@ -220,10 +220,10 @@ export const EventStreamWidget: React.FC<EventStreamWidgetProps> = ({ events }) 
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
 
-  // Filter to relevant events
-  const streamEvents = events.filter(e =>
-    ['iteration_start', 'claude_response', 'tool_call', 'tool_result'].includes(e.type)
-  );
+  // Filter to relevant events and sort chronologically (oldest first, newest at bottom)
+  const streamEvents = events
+    .filter(e => ['iteration_start', 'claude_response', 'tool_call', 'tool_result'].includes(e.type))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   // Auto-scroll to bottom
   useEffect(() => {

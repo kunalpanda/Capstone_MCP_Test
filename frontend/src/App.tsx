@@ -6,7 +6,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useOrchestratorState } from './hooks/useOrchestratorState';
 import { useTheme } from './hooks/useTheme';
 import { Layout } from './components/Layout';
-import { DashboardView, TableView } from './components/Views';
+import { DashboardView, TableView, LogsView } from './components/Views';
 import { PRSummaryModal } from './components/PRSummaryModal/PRSummaryModal';
 import type { ViewMode } from './components/Layout/Sidebar';
 
@@ -18,6 +18,7 @@ function App() {
   const [activeView, setActiveView] = useState<ViewMode>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const hasShownModal = useRef(false);
+  const [workflowStartTime, setWorkflowStartTime] = useState<number | null>(null);
   
   // Debug: Log all events (keep for development)
   useEffect(() => {
@@ -51,10 +52,15 @@ function App() {
     }
   }, [state.status, state.prSummary]);
 
-  // Reset modal flag when a new workflow starts
+  // Reset modal flag and set start time when a new workflow starts
   useEffect(() => {
     if (state.status === 'running' && state.currentIteration === 1) {
       hasShownModal.current = false;
+      setWorkflowStartTime(Date.now());
+    }
+    // Clear start time when workflow ends
+    if (state.status === 'idle' || state.status === 'complete' || state.status === 'error') {
+      // Keep the time for display, don't reset immediately
     }
   }, [state.status, state.currentIteration]);
   
@@ -76,15 +82,13 @@ function App() {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <DashboardView state={state} events={events} />;
+        return <DashboardView state={state} events={events} workflowStartTime={workflowStartTime} />;
       case 'table':
         return <TableView events={events} />;
-      case 'details':
-        // Details view could show expanded PR info or selected event details
-        // For now, redirect to dashboard
-        return <DashboardView state={state} events={events} />;
+      case 'logs':
+        return <LogsView events={events} />;
       default:
-        return <DashboardView state={state} events={events} />;
+        return <DashboardView state={state} events={events} workflowStartTime={workflowStartTime} />;
     }
   };
   

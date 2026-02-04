@@ -18,6 +18,7 @@ import './RecentActionsWidget.css';
 
 interface RecentActionsWidgetProps {
   actions: string[];
+  totalActions: number;
 }
 
 // Map tool names to icons
@@ -58,7 +59,7 @@ const parseToolName = (action: string): string => {
   return action;
 };
 
-export const RecentActionsWidget: React.FC<RecentActionsWidgetProps> = ({ actions }) => {
+export const RecentActionsWidget: React.FC<RecentActionsWidgetProps> = ({ actions, totalActions }) => {
   if (actions.length === 0) {
     return (
       <div className="recent-actions-widget recent-actions-widget--empty">
@@ -73,17 +74,21 @@ export const RecentActionsWidget: React.FC<RecentActionsWidgetProps> = ({ action
     );
   }
 
+  // Reverse actions so oldest is at top, newest at bottom
+  const displayActions = [...actions].reverse();
+
   return (
     <div className="recent-actions-widget">
       <div className="recent-actions-widget__list">
-        {actions.map((action, index) => {
+        {displayActions.map((action, index) => {
           const toolName = parseToolName(action);
           const icon = getToolIcon(action);
+          const isLatest = index === displayActions.length - 1;
           
           return (
             <div
               key={index}
-              className="recent-actions-widget__item"
+              className={`recent-actions-widget__item ${isLatest ? 'recent-actions-widget__item--latest' : ''}`}
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div className="recent-actions-widget__item-icon">
@@ -93,7 +98,7 @@ export const RecentActionsWidget: React.FC<RecentActionsWidgetProps> = ({ action
                 <span className="recent-actions-widget__item-name">
                   {toolName}
                 </span>
-                {index === 0 && (
+                {isLatest && (
                   <span className="recent-actions-widget__item-badge">Latest</span>
                 )}
               </div>
@@ -107,7 +112,7 @@ export const RecentActionsWidget: React.FC<RecentActionsWidgetProps> = ({ action
       <div className="recent-actions-widget__footer">
         <div className="recent-actions-widget__stat">
           <Wrench size={14} />
-          <span>{actions.length} tool calls</span>
+          <span>{totalActions} tool calls</span>
         </div>
       </div>
     </div>

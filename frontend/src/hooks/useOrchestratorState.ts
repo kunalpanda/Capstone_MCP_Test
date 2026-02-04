@@ -9,6 +9,7 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
     repo: '',
     branch: '',
     recentActions: [],
+    totalActions: 0,
     prSummary: null,
     currentCoverage: null,
     targetCoverage: null
@@ -28,6 +29,8 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
           newState.repo = `${latestEvent.data.repo_owner}/${latestEvent.data.repo_name}`;
           newState.branch = latestEvent.data.branch;
           newState.maxIterations = latestEvent.data.max_iterations;
+          newState.recentActions = [];
+          newState.totalActions = 0;
           break;
 
         case 'iteration_start':
@@ -67,6 +70,7 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
             `Called ${latestEvent.data.tool_name}`,
             ...prev.recentActions.slice(0, 9)
           ];
+          newState.totalActions = prev.totalActions + 1;
           break;
       }
 

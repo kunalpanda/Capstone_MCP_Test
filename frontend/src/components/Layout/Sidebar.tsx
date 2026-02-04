@@ -9,11 +9,11 @@ import {
   ChevronRight,
   Bot,
   Table,
-  Layers
+  Terminal
 } from 'lucide-react';
 import './Sidebar.css';
 
-export type ViewMode = 'dashboard' | 'table' | 'details';
+export type ViewMode = 'dashboard' | 'table' | 'logs';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -53,9 +53,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <Table size={20} />
     },
     {
-      id: 'details',
-      label: 'Detail Panel',
-      icon: <Layers size={20} />
+      id: 'logs',
+      label: 'Logs & Results',
+      icon: <Terminal size={20} />
     }
   ];
 

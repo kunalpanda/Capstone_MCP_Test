@@ -1,7 +1,7 @@
 // src/components/EventTable/EventTable.tsx
 // Sortable and filterable table view for events
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   ArrowUpDown,
   ArrowUp,
@@ -18,7 +18,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  ArrowDownToLine,
+  Pause
 } from 'lucide-react';
 import { BaseEvent } from '../../services/types';
 import './EventTable.css';
@@ -54,10 +56,12 @@ const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 export const EventTable: React.FC<EventTableProps> = ({ events }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'timestamp', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'timestamp', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [showFilters, setShowFilters] = useState(false);
+  const [autoFollow, setAutoFollow] = useState(true);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Get unique event types from data
   const availableTypes = useMemo(() => {
@@ -140,9 +144,22 @@ export const EventTable: React.FC<EventTableProps> = ({ events }) => {
   }, [filteredAndSortedEvents, currentPage, itemsPerPage]);
 
   // Reset to first page when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, typeFilter, itemsPerPage]);
+
+  // Auto-follow: jump to last page and scroll to bottom when new events arrive
+  useEffect(() => {
+    if (autoFollow && totalPages > 0) {
+      setCurrentPage(totalPages);
+      // Scroll to bottom of table after state updates
+      setTimeout(() => {
+        if (tableContainerRef.current) {
+          tableContainerRef.current.scrollTop = tableContainerRef.current.scrollHeight;
+        }
+      }, 0);
+    }
+  }, [autoFollow, totalPages, filteredAndSortedEvents.length]);
 
   const handleSort = (field: SortField) => {
     setSortConfig(prev => ({
@@ -223,6 +240,24 @@ export const EventTable: React.FC<EventTableProps> = ({ events }) => {
               <span>Clear</span>
             </button>
           )}
+
+          <button
+            className={`event-table__follow-btn ${autoFollow ? 'event-table__follow-btn--active' : ''}`}
+            onClick={() => setAutoFollow(!autoFollow)}
+            title={autoFollow ? 'Pause auto-follow' : 'Resume auto-follow'}
+          >
+            {autoFollow ? (
+              <>
+                <ArrowDownToLine size={16} />
+                <span>Following</span>
+              </>
+            ) : (
+              <>
+                <Pause size={16} />
+                <span>Paused</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -251,7 +286,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events }) => {
       )}
 
       {/* Table */}
-      <div className="event-table__container">
+      <div className="event-table__container" ref={tableContainerRef}>
         <table>
           <thead>
             <tr>

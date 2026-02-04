@@ -113,6 +113,7 @@ export interface OrchestratorState {
   repo: string;
   branch: string;
   recentActions: string[];
+  totalActions: number;
   prSummary: PRSummaryData | null;
   currentCoverage: CoverageMetrics | null;
   targetCoverage: CoverageMetrics | null;
