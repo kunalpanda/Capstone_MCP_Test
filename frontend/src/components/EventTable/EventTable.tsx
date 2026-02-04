@@ -71,27 +71,35 @@ export const EventTable: React.FC<EventTableProps> = ({ events }) => {
 
   // Extract details string from event
   const getEventDetails = (event: BaseEvent): string => {
+    // Defensive check for missing data
+    if (!event.data) return 'No data';
+    
     switch (event.type) {
       case 'iteration_start':
-        return `Iteration ${event.data.iteration} of ${event.data.max_iterations}`;
+        return `Iteration ${event.data.iteration ?? '?'} of ${event.data.max_iterations ?? '?'}`;
       case 'claude_response':
         return event.data.message_preview || event.data.text_content?.substring(0, 100) || 'No content';
       case 'tool_call':
-        return `${event.data.tool_name}: ${event.data.input_preview || ''}`;
+        return `${event.data.tool_name || 'Unknown tool'}: ${event.data.input_preview || ''}`;
       case 'tool_result':
-        return `${event.data.tool_name}: ${event.data.success ? 'Success' : 'Failed'} ${event.data.result_summary ? `- ${event.data.result_summary.substring(0, 50)}` : ''}`;
+        const resultSummary = event.data.result_summary ? `- ${event.data.result_summary.substring(0, 50)}` : '';
+        return `${event.data.tool_name || 'Unknown tool'}: ${event.data.success ? 'Success' : 'Failed'} ${resultSummary}`;
       case 'workflow_start':
-        return `${event.data.repo_owner}/${event.data.repo_name} on ${event.data.branch}`;
+        return `${event.data.repo_owner || '?'}/${event.data.repo_name || '?'} on ${event.data.branch || '?'}`;
       case 'workflow_complete':
-        return `${event.data.success ? 'Completed successfully' : 'Failed'} - ${event.data.total_iterations} iterations`;
+        return `${event.data.success ? 'Completed successfully' : 'Failed'} - ${event.data.total_iterations ?? '?'} iterations`;
       case 'state_update':
         return event.data.phase || 'State updated';
       case 'error':
-        return `${event.data.error_type}: ${event.data.error_message}`;
+        return `${event.data.error_type || 'Error'}: ${event.data.error_message || 'Unknown error'}`;
       case 'pr_summary':
-        return `PR #${event.data.pr_number}: ${event.data.title}`;
+        return `PR #${event.data.pr_number ?? '?'}: ${event.data.title || 'No title'}`;
       default:
-        return JSON.stringify(event.data).substring(0, 100);
+        try {
+          return JSON.stringify(event.data).substring(0, 100);
+        } catch {
+          return 'Unable to parse data';
+        }
     }
   };
 

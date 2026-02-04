@@ -4,7 +4,10 @@
 .recent-actions-widget {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /* Fill parent flex container */
+  flex: 1;
+  /* Allow shrinking below content size */
+  min-height: 0;
 }
 
 /* Empty State */
@@ -41,7 +44,7 @@
   color: var(--text-muted);
 }
 
-/* List */
+/* List - scrollable container */
 .recent-actions-widget__list {
   display: flex;
   flex-direction: column;
@@ -49,6 +52,8 @@
   flex: 1;
   overflow-y: auto;
   padding-right: var(--space-1);
+  /* Critical: Allow flex item to shrink below content size */
+  min-height: 0;
 }
 
 /* Item */

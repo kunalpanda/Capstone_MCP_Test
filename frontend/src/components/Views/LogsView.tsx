@@ -12,7 +12,11 @@ import {
   Clock,
   Filter,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  MessageSquare,
+  Wrench
 } from 'lucide-react';
 import { BaseEvent } from '../../services/types';
 import './LogsView.css';
@@ -25,11 +29,20 @@ type TabId = 'logs' | 'tests' | 'files';
 
 type LogLevel = 'info' | 'warning' | 'error' | 'debug';
 
+interface ExpandableData {
+  type: 'claude_response' | 'tool_call' | 'tool_result';
+  fullContent?: string;
+  toolInput?: Record<string, unknown>;
+  resultSummary?: string;
+  errorMessage?: string;
+}
+
 interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
   source: string;
+  expandable?: ExpandableData;
 }
 
 interface TestResult {
@@ -60,6 +73,19 @@ interface FileChange {
 export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
   const [activeTab, setActiveTab] = useState<TabId>('logs');
   const [logFilter, setLogFilter] = useState<LogLevel | 'all'>('all');
+  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+
+  const toggleLogExpanded = (index: number) => {
+    setExpandedLogs(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   // Extract logs from events
   const logs = useMemo((): LogEntry[] => {
@@ -126,7 +152,11 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
             timestamp: event.timestamp,
             level: 'debug',
             message: `Calling tool: ${event.data.tool_name}${event.data.input_preview ? ` - ${event.data.input_preview.substring(0, 80)}` : ''}`,
-            source: 'tool'
+            source: 'tool',
+            expandable: event.data.tool_input && Object.keys(event.data.tool_input).length > 0 ? {
+              type: 'tool_call',
+              toolInput: event.data.tool_input
+            } : undefined
           });
           break;
 
@@ -135,7 +165,12 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
             timestamp: event.timestamp,
             level: event.data.success ? 'info' : 'error',
             message: `Tool "${event.data.tool_name}" ${event.data.success ? 'succeeded' : 'failed'}${event.data.result_summary ? `: ${event.data.result_summary.substring(0, 100)}` : ''}`,
-            source: 'tool'
+            source: 'tool',
+            expandable: (event.data.result_summary?.length > 100 || event.data.error_message) ? {
+              type: 'tool_result',
+              resultSummary: event.data.result_summary,
+              errorMessage: event.data.error_message
+            } : undefined
           });
           break;
 
@@ -145,7 +180,11 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
               timestamp: event.timestamp,
               level: 'info',
               message: `Claude: ${event.data.text_content.substring(0, 150)}${event.data.text_content.length > 150 ? '...' : ''}`,
-              source: 'claude'
+              source: 'claude',
+              expandable: event.data.text_content.length > 150 ? {
+                type: 'claude_response',
+                fullContent: event.data.text_content
+              } : undefined
             });
           }
           break;
@@ -317,6 +356,63 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
     }
   };
 
+  const getSourceIcon = (source: string) => {
+    switch (source) {
+      case 'claude': return <MessageSquare size={14} />;
+      case 'tool': return <Wrench size={14} />;
+      default: return null;
+    }
+  };
+
+  const renderExpandedContent = (expandable: ExpandableData) => {
+    switch (expandable.type) {
+      case 'claude_response':
+        return (
+          <div className="logs-view__expanded">
+            <div className="logs-view__expanded-label">Full Response</div>
+            <div className="logs-view__expanded-content">
+              {expandable.fullContent}
+            </div>
+          </div>
+        );
+
+      case 'tool_call':
+        return (
+          <div className="logs-view__expanded">
+            <div className="logs-view__expanded-label">Tool Input</div>
+            <pre className="logs-view__expanded-code">
+              {JSON.stringify(expandable.toolInput, null, 2)}
+            </pre>
+          </div>
+        );
+
+      case 'tool_result':
+        return (
+          <div className="logs-view__expanded">
+            {expandable.resultSummary && (
+              <>
+                <div className="logs-view__expanded-label">Full Result</div>
+                <div className="logs-view__expanded-content">
+                  {expandable.resultSummary}
+                </div>
+              </>
+            )}
+            {expandable.errorMessage && (
+              <>
+                <div className="logs-view__expanded-label">Error Details</div>
+                <div className="logs-view__expanded-error">
+                  {expandable.errorMessage}
+                </div>
+              </>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="logs-view">
       {/* Tabs */}
@@ -385,17 +481,35 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
                   <span>No logs to display</span>
                 </div>
               ) : (
-                filteredLogs.map((log, index) => (
-                  <div key={index} className={`logs-view__log-entry logs-view__log-entry--${log.level}`}>
-                    <span className="logs-view__log-time">{formatTimestamp(log.timestamp)}</span>
-                    <span className={`logs-view__log-level logs-view__log-level--${log.level}`}>
-                      {getLogIcon(log.level)}
-                      {log.level.toUpperCase()}
-                    </span>
-                    <span className="logs-view__log-source">[{log.source}]</span>
-                    <span className="logs-view__log-message">{log.message}</span>
-                  </div>
-                ))
+                filteredLogs.map((log, index) => {
+                  const isExpanded = expandedLogs.has(index);
+                  return (
+                    <div key={index} className={`logs-view__log-entry logs-view__log-entry--${log.level} ${isExpanded ? 'logs-view__log-entry--expanded' : ''}`}>
+                      <div className="logs-view__log-row">
+                        <span className="logs-view__log-time">{formatTimestamp(log.timestamp)}</span>
+                        <span className={`logs-view__log-level logs-view__log-level--${log.level}`}>
+                          {getLogIcon(log.level)}
+                          {log.level.toUpperCase()}
+                        </span>
+                        <span className="logs-view__log-source">
+                          {getSourceIcon(log.source)}
+                          [{log.source}]
+                        </span>
+                        <span className="logs-view__log-message">{log.message}</span>
+                        {log.expandable && (
+                          <button
+                            className="logs-view__log-expand"
+                            onClick={() => toggleLogExpanded(index)}
+                            title={isExpanded ? 'Collapse' : 'Expand'}
+                          >
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        )}
+                      </div>
+                      {isExpanded && log.expandable && renderExpandedContent(log.expandable)}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

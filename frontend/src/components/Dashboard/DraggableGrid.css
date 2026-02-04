@@ -190,9 +190,9 @@
   align-content: start;
 }
 
-/* Ensure widgets stretch to fill grid cells */
+/* Ensure widgets stretch to fill grid cells - 70-80% visible without scrolling */
 .draggable-grid > * {
-  min-height: 200px;
+  min-height: 280px;
 }
 
 /* Drag Overlay */
@@ -241,11 +241,32 @@
   }
 }
 
+/* Medium screens - ensure widgets don't get too small */
+@media (max-width: 1200px) {
+  .draggable-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .draggable-grid > * {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 900px) {
+  .draggable-grid > * {
+    min-height: 250px;
+  }
+}
+
 @media (max-width: 768px) {
   .draggable-grid {
     grid-template-columns: 1fr;
     padding: var(--space-3);
     gap: var(--space-3);
+  }
+
+  .draggable-grid > * {
+    min-height: 240px;
   }
 
   .grid-controls {

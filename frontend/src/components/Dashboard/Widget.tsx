@@ -23,6 +23,8 @@ interface WidgetProps {
   headerActions?: React.ReactNode;
   className?: string;
   noPadding?: boolean;
+  /** When true, disables parent scroll container - use when widget has its own internal scrolling */
+  internalScroll?: boolean;
 }
 
 /**
@@ -39,6 +41,7 @@ export const Widget: React.FC<WidgetProps> = ({
   headerActions,
   className = '',
   noPadding = false,
+  internalScroll = false,
 }) => {
   const {
     attributes,
@@ -107,7 +110,7 @@ export const Widget: React.FC<WidgetProps> = ({
       </div>
 
       {/* Widget Content */}
-      <div className={`widget__content ${noPadding ? 'widget__content--no-padding' : ''}`}>
+      <div className={`widget__content ${noPadding ? 'widget__content--no-padding' : ''} ${internalScroll ? 'widget__content--internal-scroll' : ''}`}>
         {children}
       </div>
     </div>

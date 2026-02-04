@@ -7,8 +7,6 @@ import {
   Wrench,
   CheckCircle2,
   XCircle,
-  ChevronDown,
-  ChevronUp,
   Clock,
   Play,
   Inbox,
@@ -24,8 +22,6 @@ interface EventStreamWidgetProps {
 
 interface EventCardProps {
   event: BaseEvent;
-  isExpanded: boolean;
-  onToggle: () => void;
 }
 
 const formatTimestamp = (timestamp: string): string => {
@@ -41,7 +37,7 @@ const formatTimestamp = (timestamp: string): string => {
   }
 };
 
-const EventCard: React.FC<EventCardProps> = ({ event, isExpanded, onToggle }) => {
+const EventCard: React.FC<EventCardProps> = ({ event }) => {
   const renderEventContent = () => {
     switch (event.type) {
       case 'iteration_start':
@@ -80,11 +76,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, isExpanded, onToggle }) =>
                 </span>
               )}
             </div>
-            {event.data.text_content && event.data.text_content.length > 100 && (
-              <button className="event-card__expand" onClick={onToggle}>
-                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-            )}
           </div>
         );
 
@@ -101,11 +92,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, isExpanded, onToggle }) =>
                 {(event.data.input_preview?.length > 80) && '...'}
               </span>
             </div>
-            {event.data.tool_input && Object.keys(event.data.tool_input).length > 0 && (
-              <button className="event-card__expand" onClick={onToggle}>
-                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-            )}
           </div>
         );
 
@@ -137,62 +123,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, isExpanded, onToggle }) =>
                 </span>
               )}
             </div>
-            {(event.data.result_summary?.length > 80 || event.data.error_message) && (
-              <button className="event-card__expand" onClick={onToggle}>
-                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  const renderExpandedContent = () => {
-    if (!isExpanded) return null;
-
-    switch (event.type) {
-      case 'claude_response':
-        return (
-          <div className="event-card__expanded">
-            <div className="event-card__expanded-label">Full Response</div>
-            <div className="event-card__expanded-content">
-              {event.data.text_content}
-            </div>
-          </div>
-        );
-
-      case 'tool_call':
-        return (
-          <div className="event-card__expanded">
-            <div className="event-card__expanded-label">Tool Input</div>
-            <pre className="event-card__expanded-code">
-              {JSON.stringify(event.data.tool_input, null, 2)}
-            </pre>
-          </div>
-        );
-
-      case 'tool_result':
-        return (
-          <div className="event-card__expanded">
-            {event.data.result_summary && (
-              <>
-                <div className="event-card__expanded-label">Result</div>
-                <div className="event-card__expanded-content">
-                  {event.data.result_summary}
-                </div>
-              </>
-            )}
-            {event.data.error_message && (
-              <>
-                <div className="event-card__expanded-label">Error Details</div>
-                <div className="event-card__expanded-error">
-                  {event.data.error_message}
-                </div>
-              </>
-            )}
           </div>
         );
 
@@ -205,12 +135,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, isExpanded, onToggle }) =>
   if (!content) return null;
 
   return (
-    <div className={`event-card ${isExpanded ? 'event-card--expanded' : ''}`}>
+    <div className="event-card">
       <div className="event-card__timestamp">
         {formatTimestamp(event.timestamp)}
       </div>
       {content}
-      {renderExpandedContent()}
     </div>
   );
 };
@@ -218,7 +147,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, isExpanded, onToggle }) =>
 export const EventStreamWidget: React.FC<EventStreamWidgetProps> = ({ events }) => {
   const streamRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
 
   // Filter to relevant events and sort chronologically (oldest first, newest at bottom)
   const streamEvents = events
@@ -231,18 +159,6 @@ export const EventStreamWidget: React.FC<EventStreamWidgetProps> = ({ events }) 
       streamRef.current.scrollTop = streamRef.current.scrollHeight;
     }
   }, [streamEvents.length, autoScroll]);
-
-  const toggleExpanded = (index: number) => {
-    setExpandedEvents(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  };
 
   if (streamEvents.length === 0) {
     return (
@@ -266,8 +182,6 @@ export const EventStreamWidget: React.FC<EventStreamWidgetProps> = ({ events }) 
           <EventCard
             key={index}
             event={event}
-            isExpanded={expandedEvents.has(index)}
-            onToggle={() => toggleExpanded(index)}
           />
         ))}
       </div>

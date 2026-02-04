@@ -13,6 +13,8 @@
     box-shadow var(--transition-fast),
     border-color var(--transition-fast),
     transform var(--transition-fast);
+  /* Ensure minimum height for smaller screens */
+  min-height: 280px;
 }
 
 .widget:hover {
@@ -139,12 +141,22 @@
 .widget__content {
   flex: 1;
   padding: var(--space-4);
+  /* Allow scrolling when content overflows */
   overflow: auto;
+  /* Critical: allows flex child to shrink */
   min-height: 0;
+  /* Make this a flex container so children can use flex: 1 */
+  display: flex;
+  flex-direction: column;
 }
 
 .widget__content--no-padding {
   padding: 0;
+}
+
+/* For widgets that handle their own internal scrolling */
+.widget__content--internal-scroll {
+  overflow: hidden;
 }
 
 /* Placeholder for drag operations */
@@ -222,7 +234,17 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .widget {
+    min-height: 260px;
+  }
+}
+
 @media (max-width: 768px) {
+  .widget {
+    min-height: 240px;
+  }
+
   .widget__header {
     padding: var(--space-2) var(--space-3);
     min-height: 44px;

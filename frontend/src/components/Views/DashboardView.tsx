@@ -91,6 +91,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ state, events, wor
               icon={WIDGET_ICONS[widgetId]}
               onHide={() => hideWidget(widgetId)}
               className={widgetId === 'event-stream' ? 'widget--event-stream' : ''}
+              internalScroll={widgetId === 'event-stream'}
             >
               {renderWidgetContent(widgetId)}
             </Widget>
