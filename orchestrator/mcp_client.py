@@ -17,7 +17,7 @@ async def call_mcp_tool(server_url: str, method: str, name: str = None, params: 
     if params:
         payload["params"]["params"] = params
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=600.0) as client:
         response = await client.post(server_url, json=payload)
         response.raise_for_status()
         return response.json()
