@@ -1,288 +1,355 @@
 # backend/websocket_server.py
 """
-WebSocket server for real-time dashboard updates.
-Receives events from orchestrator via HTTP POST and broadcasts to connected dashboard clients.
+Event Gateway: WebSocket server for real-time dashboard updates.
+
+This service:
+1. Subscribes to Pub/Sub workflow-events topic
+2. Persists events to Firestore
+3. Broadcasts events to connected WebSocket clients
+4. Serves event history from Firestore
 """
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from typing import List, Dict, Any
-import json
 import asyncio
+import json
+import os
 from datetime import datetime
-import logging
+from typing import Set, Dict, Any, List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from google.cloud import pubsub_v1, firestore
+import uvicorn
+import threading
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+app = FastAPI(title="Event Gateway")
 
-# Initialize FastAPI app
-app = FastAPI(title="Orchestrator Dashboard WebSocket Server")
-
-# Configure CORS to allow frontend connections
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React default ports
+    allow_origins=["*"],  # In production, specify your frontend domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Configuration
+PROJECT_ID = os.getenv('PROJECT_ID', 'capstone-cicd-ai')
+EVENTS_TOPIC = os.getenv('PUBSUB_TOPIC_EVENTS', 'workflow-events')
+EVENTS_SUBSCRIPTION = os.getenv(
+    'PUBSUB_SUBSCRIPTION_EVENTS', 'workflow-events-sub')
 
-# ============================================================================
-# Connection Manager
-# ============================================================================
+print(f"🚀 Event Gateway starting...")
+print(f"   Project: {PROJECT_ID}")
+print(f"   Events Topic: {EVENTS_TOPIC}")
+print(f"   Events Subscription: {EVENTS_SUBSCRIPTION}")
 
-class ConnectionManager:
-    """Manages WebSocket connections and broadcasts events to all clients."""
-    
+# Check if using emulators
+if os.getenv('PUBSUB_EMULATOR_HOST'):
+    print(f"🔧 Using Pub/Sub EMULATOR: {os.getenv('PUBSUB_EMULATOR_HOST')}")
+
+if os.getenv('FIRESTORE_EMULATOR_HOST'):
+    print(
+        f"🔧 Using Firestore EMULATOR: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
+
+# Initialize clients
+subscriber = pubsub_v1.SubscriberClient()
+subscription_path = subscriber.subscription_path(
+    PROJECT_ID, EVENTS_SUBSCRIPTION)
+firestore_client = firestore.Client(project=PROJECT_ID)
+
+# Active WebSocket connections
+active_connections: Set[WebSocket] = set()
+
+
+class EventGateway:
+    """Manages WebSocket connections and event broadcasting."""
+
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self.event_history: List[Dict[str, Any]] = []
-        self.max_history = 1000  # Keep last 1000 events
-        
+        self.connections: Set[WebSocket] = set()
+
     async def connect(self, websocket: WebSocket):
-        """Accept new WebSocket connection and send event history."""
+        """
+        Handle new WebSocket connection.
+
+        Sends recent event history to newly connected client.
+        """
         await websocket.accept()
-        self.active_connections.append(websocket)
-        logger.info(f"New client connected. Total clients: {len(self.active_connections)}")
-        
-        # Send event history to newly connected client
-        if self.event_history:
-            try:
-                await websocket.send_json({
-                    "type": "history",
-                    "events": self.event_history
-                })
-                logger.info(f"Sent {len(self.event_history)} historical events to new client")
-            except Exception as e:
-                logger.error(f"Error sending history: {e}")
-    
+        self.connections.add(websocket)
+
+        print(
+            f"✅ WebSocket connected. Total connections: {len(self.connections)}")
+
+        # Send recent event history to new client
+        try:
+            history = await self.get_event_history(limit=50)
+            await websocket.send_json({
+                "type": "history",
+                "events": history
+            })
+            print(f"📤 Sent {len(history)} historical events to new client")
+        except Exception as e:
+            print(f"⚠️  Failed to send history: {e}")
+
     def disconnect(self, websocket: WebSocket):
         """Remove disconnected WebSocket."""
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-        logger.info(f"Client disconnected. Total clients: {len(self.active_connections)}")
-    
-    async def broadcast(self, event: Dict[str, Any]):
-        """Broadcast event to all connected clients."""
-        # Add to history
-        self.event_history.append(event)
-        
-        # Trim history if too large
-        if len(self.event_history) > self.max_history:
-            self.event_history = self.event_history[-self.max_history:]
-        
-        # Broadcast to all connected clients
-        disconnected = []
-        for connection in self.active_connections:
+        self.connections.discard(websocket)
+        print(
+            f"❌ WebSocket disconnected. Total connections: {len(self.connections)}")
+
+    async def broadcast(self, event_data: Dict[str, Any]):
+        """
+        Broadcast event to all connected clients.
+
+        Args:
+            event_data: Event data to broadcast
+        """
+        if not self.connections:
+            return
+
+        disconnected = set()
+
+        for connection in self.connections:
             try:
-                await connection.send_json(event)
-            except WebSocketDisconnect:
-                disconnected.append(connection)
+                await connection.send_json(event_data)
             except Exception as e:
-                logger.error(f"Error broadcasting to client: {e}")
-                disconnected.append(connection)
-        
+                print(f"⚠️  Failed to send to client: {e}")
+                disconnected.add(connection)
+
         # Clean up disconnected clients
         for connection in disconnected:
-            self.disconnect(connection)
-        
-        logger.info(f"Broadcasted event type '{event.get('type')}' to {len(self.active_connections)} clients")
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """Get server statistics."""
-        return {
-            "active_connections": len(self.active_connections),
-            "total_events": len(self.event_history),
-            "max_history": self.max_history
-        }
+            self.connections.discard(connection)
+
+        if self.connections:
+            print(f"📡 Broadcast event to {len(self.connections)} client(s)")
+
+    async def get_event_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Fetch recent events from Firestore.
+
+        Args:
+            limit: Maximum number of events to fetch
+
+        Returns:
+            List of recent events
+        """
+        try:
+            # Query events ordered by timestamp (most recent first)
+            events_ref = firestore_client.collection('events')
+            query = events_ref.order_by(
+                'timestamp', direction=firestore.Query.DESCENDING).limit(limit)
+
+            events = []
+            for doc in query.stream():
+                event_data = doc.to_dict()
+                event_data['id'] = doc.id
+                events.append(event_data)
+
+            # Reverse to get chronological order (oldest first)
+            events.reverse()
+
+            return events
+
+        except Exception as e:
+            print(f"❌ Failed to fetch event history: {e}")
+            return []
+
+    async def save_event_to_firestore(self, event_data: Dict[str, Any]) -> str:
+        """
+        Persist event to Firestore.
+
+        Args:
+            event_data: Event data to persist
+
+        Returns:
+            Event document ID
+        """
+        try:
+            # Add timestamp if not present
+            if 'timestamp' not in event_data:
+                event_data['timestamp'] = datetime.utcnow().isoformat()
+
+            # Create event document
+            doc_ref = firestore_client.collection('events').document()
+            doc_ref.set(event_data)
+
+            print(f"💾 Saved event to Firestore: {doc_ref.id}")
+            return doc_ref.id
+
+        except Exception as e:
+            print(f"❌ Failed to save event: {e}")
+            raise
 
 
-# Initialize connection manager
-manager = ConnectionManager()
+# Global gateway instance
+gateway = EventGateway()
 
 
-# ============================================================================
-# WebSocket Endpoint
-# ============================================================================
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+def pubsub_callback(message):
     """
-    WebSocket endpoint for dashboard clients.
-    Accepts connections and streams events in real-time.
+    Callback for Pub/Sub messages.
+
+    Persists event to Firestore and broadcasts to WebSocket clients.
     """
-    await manager.connect(websocket)
-    
     try:
-        while True:
-            # Keep connection alive and listen for client messages (if any)
-            data = await websocket.receive_text()
-            
-            # Handle client messages (ping/pong, etc.)
-            try:
-                message = json.loads(data)
-                if message.get("type") == "ping":
-                    await websocket.send_json({"type": "pong"})
-            except json.JSONDecodeError:
-                logger.warning(f"Received invalid JSON from client: {data}")
-                
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        logger.info("Client disconnected normally")
+        # Parse event data
+        event_data = json.loads(message.data.decode('utf-8'))
+
+        print(f"📥 Received event: {event_data.get('type', 'unknown')}")
+
+        # Save to Firestore (synchronously for simplicity)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            # Save event
+            event_id = loop.run_until_complete(
+                gateway.save_event_to_firestore(event_data)
+            )
+
+            # Broadcast to connected clients
+            loop.run_until_complete(
+                gateway.broadcast(event_data)
+            )
+
+            # Acknowledge message
+            message.ack()
+            print(f"✅ Event processed: {event_id}")
+
+        finally:
+            loop.close()
+
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket)
+        print(f"❌ Error processing event: {e}")
+        message.nack()
 
 
-# ============================================================================
-# HTTP Endpoints
-# ============================================================================
-
-@app.post("/api/events")
-async def receive_event(event: Dict[str, Any]):
+def start_pubsub_subscriber():
     """
-    Receive events from orchestrator and broadcast to all connected clients.
-    
-    Expected event format:
-    {
-        "type": "iteration_start" | "claude_response" | "tool_result" | "state_update",
-        "timestamp": "ISO-8601 timestamp",
-        "data": { ... event-specific data ... }
-    }
+    Start Pub/Sub subscriber in background thread.
     """
     try:
-        # Validate event structure
-        if "type" not in event:
-            raise HTTPException(status_code=400, detail="Event must have 'type' field")
-        
-        # Add server timestamp if not present
-        if "timestamp" not in event:
-            event["timestamp"] = datetime.utcnow().isoformat()
-        
-        # Broadcast to all connected clients
-        await manager.broadcast(event)
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status": "success",
-                "message": "Event broadcasted",
-                "clients_notified": len(manager.active_connections)
-            }
+        print(f"\n{'='*60}")
+        print(f"👂 Starting Pub/Sub subscriber...")
+        print(f"   Subscription: {subscription_path}")
+        print(f"{'='*60}\n")
+
+        # Configure flow control
+        flow_control = pubsub_v1.types.FlowControl(max_messages=10)
+
+        # Start streaming pull
+        streaming_pull_future = subscriber.subscribe(
+            subscription_path,
+            callback=pubsub_callback,
+            flow_control=flow_control
         )
-        
+
+        print(f"✅ Event subscriber started\n")
+
+        # Block until cancelled
+        streaming_pull_future.result()
+
     except Exception as e:
-        logger.error(f"Error processing event: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ Subscriber error: {e}")
 
 
-@app.get("/api/status")
-async def get_status():
-    """Get server status and statistics."""
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "running",
-            "stats": manager.get_stats(),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+# Start subscriber thread
+subscriber_thread = None
 
-
-@app.get("/api/events/history")
-async def get_event_history(limit: int = 100):
-    """Get recent event history."""
-    events = manager.event_history[-limit:] if limit > 0 else manager.event_history
-    return JSONResponse(
-        status_code=200,
-        content={
-            "events": events,
-            "total": len(manager.event_history),
-            "returned": len(events)
-        }
-    )
-
-
-@app.delete("/api/events/history")
-async def clear_event_history():
-    """Clear event history (useful for testing)."""
-    count = len(manager.event_history)
-    manager.event_history.clear()
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "success",
-            "message": f"Cleared {count} events from history"
-        }
-    )
-
-
-@app.get("/")
-async def root():
-    """Root endpoint with server info."""
-    return {
-        "service": "Orchestrator Dashboard WebSocket Server",
-        "version": "1.0.0",
-        "endpoints": {
-            "websocket": "/ws",
-            "post_event": "/api/events",
-            "get_status": "/api/status",
-            "get_history": "/api/events/history",
-            "clear_history": "/api/events/history (DELETE)"
-        },
-        "active_connections": len(manager.active_connections)
-    }
-
-
-# ============================================================================
-# Startup/Shutdown Events
-# ============================================================================
 
 @app.on_event("startup")
 async def startup_event():
-    """Log startup information."""
-    logger.info("=" * 60)
-    logger.info("WebSocket Server Starting")
-    logger.info("=" * 60)
-    logger.info("WebSocket endpoint: ws://localhost:8000/ws")
-    logger.info("Event POST endpoint: http://localhost:8000/api/events")
-    logger.info("Status endpoint: http://localhost:8000/api/status")
-    logger.info("=" * 60)
+    """Start Pub/Sub subscriber when app starts."""
+    global subscriber_thread
+
+    subscriber_thread = threading.Thread(
+        target=start_pubsub_subscriber, daemon=True)
+    subscriber_thread.start()
+
+    print("🚀 Background event subscriber started")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
-    logger.info("Shutting down WebSocket server...")
-    
-    # Close all active connections
-    for connection in manager.active_connections[:]:
-        try:
-            await connection.close()
-        except Exception as e:
-            logger.error(f"Error closing connection: {e}")
-    
-    logger.info("WebSocket server shutdown complete")
+    print("🛑 Shutting down...")
 
 
-# ============================================================================
-# Main Entry Point
-# ============================================================================
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for dashboard connections.
+    """
+    await gateway.connect(websocket)
+
+    try:
+        while True:
+            # Keep connection alive and handle any client messages
+            data = await websocket.receive_text()
+
+            # Echo back for debugging
+            await websocket.send_json({
+                "type": "echo",
+                "message": f"Received: {data}"
+            })
+
+    except WebSocketDisconnect:
+        gateway.disconnect(websocket)
+    except Exception as e:
+        print(f"❌ WebSocket error: {e}")
+        gateway.disconnect(websocket)
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "event-gateway",
+        "connections": len(gateway.connections)
+    }
+
+
+@app.get("/events/recent")
+async def get_recent_events(limit: int = 50):
+    """
+    REST endpoint to get recent events.
+
+    Args:
+        limit: Maximum number of events (default 50, max 100)
+    """
+    limit = min(limit, 100)  # Cap at 100
+    events = await gateway.get_event_history(limit=limit)
+
+    return {
+        "events": events,
+        "count": len(events)
+    }
+
+
+@app.get("/")
+def root():
+    """Root endpoint with service info."""
+    return {
+        "service": "Event Gateway",
+        "version": "2.0.0",
+        "description": "Real-time event broadcasting with Firestore persistence",
+        "websocket": "/ws",
+        "endpoints": {
+            "health": "/health",
+            "recent_events": "/events/recent?limit=50"
+        },
+        "active_connections": len(gateway.connections)
+    }
+
 
 if __name__ == "__main__":
-    import uvicorn
-    
-    # Run server
+    port = int(os.getenv('PORT', '8000'))
+
+    print(f"\n{'='*60}")
+    print(f"🚀 Starting Event Gateway on port {port}")
+    print(f"{'='*60}\n")
+
     uvicorn.run(
-        "websocket_server:app",
+        app,
         host="0.0.0.0",
-        port=8000,
-        reload=True,  # Auto-reload on code changes (development only)
+        port=port,
         log_level="info"
     )

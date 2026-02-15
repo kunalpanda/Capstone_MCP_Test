@@ -1,9 +1,10 @@
 # mcp_servers/jenkins_server/server.py
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from . import tools
+import tools
 
 app = FastAPI(title="Jenkins MCP Server")
+
 
 @app.post("/")
 async def handle_rpc(request: Request):
@@ -54,4 +55,6 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8020)
+    import os
+    port = int(os.getenv("PORT", 8010))
+    uvicorn.run(app, host="0.0.0.0", port=port)

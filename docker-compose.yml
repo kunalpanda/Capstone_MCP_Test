@@ -1,0 +1,94 @@
+version: "3.8"
+
+services:
+  # Firestore Emulator
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command: gcloud beta emulators firestore start --host-port=0.0.0.0:9090
+    ports:
+      - "9090:9090"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+    networks:
+      - capstone-network
+
+  # Pub/Sub Emulator
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    command: gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
+    ports:
+      - "8085:8085"
+    environment:
+      - CLOUDSDK_CORE_PROJECT=test-project
+    networks:
+      - capstone-network
+
+  # Webhook Handler
+  webhook-handler:
+    build:
+      context: ./webhook_handler
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - PROJECT_ID=test-project
+      - PUBSUB_TOPIC_COMMANDS=workflow-commands
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - FIRESTORE_EMULATOR_HOST=firestore:9090
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - capstone-network
+    restart: unless-stopped
+
+  # Orchestrator Worker
+  orchestrator-worker:
+    build:
+      context: .
+      dockerfile: ./orchestrator_worker/Dockerfile
+    environment:
+      - PORT=8082
+      - PROJECT_ID=test-project
+      - PUBSUB_SUBSCRIPTION=workflow-commands-sub
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - FIRESTORE_EMULATOR_HOST=firestore:9090
+      - GITHUB_MCP_URL=http://host.docker.internal:8010
+      - JENKINS_MCP_URL=http://host.docker.internal:8020
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - JENKINS_TOKEN=${JENKINS_TOKEN}
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - capstone-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Event Gateway (WebSocket Server)
+  event-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PROJECT_ID=test-project
+      - PUBSUB_TOPIC_EVENTS=workflow-events
+      - PUBSUB_SUBSCRIPTION_EVENTS=workflow-events-sub
+      - PUBSUB_EMULATOR_HOST=pubsub:8085
+      - FIRESTORE_EMULATOR_HOST=firestore:9090
+    depends_on:
+      - firestore
+      - pubsub
+    networks:
+      - capstone-network
+    restart: unless-stopped
+
+networks:
+  capstone-network:
+    driver: bridge

@@ -1,0 +1,199 @@
+# orchestrator_worker/app.py
+import os
+import json
+import base64
+import asyncio
+from fastapi import FastAPI, Request, HTTPException
+from google.cloud import firestore
+import sys
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+app = FastAPI(title="Orchestrator Worker")
+
+# Configuration
+PROJECT_ID = os.getenv("PROJECT_ID", "capstone-cicd-ai")
+GITHUB_MCP_URL = os.getenv("GITHUB_MCP_URL")
+JENKINS_MCP_URL = os.getenv("JENKINS_MCP_URL")
+
+print("============================================================")
+print("🚀 Orchestrator Worker starting...")
+print(f"   Project: {PROJECT_ID}")
+print(f"   GitHub MCP: {GITHUB_MCP_URL}")
+print(f"   Jenkins MCP: {JENKINS_MCP_URL}")
+print("============================================================")
+print()
+
+
+async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, commit_sha: str):
+    """
+    Execute the orchestrator workflow for the given parameters.
+    """
+    print(f"🚀 Starting workflow: {workflow_id}")
+    print(f"   Repo: {repo}")
+    print(f"   Branch: {branch}")
+    print(f"   Commit: {commit_sha}")
+    print("============================================================")
+    print()
+
+    # Initialize Firestore
+    firestore_client = firestore.Client(project=PROJECT_ID)
+
+    try:
+        # Update status to running
+        firestore_client.collection('workflows').document(workflow_id).update({
+            'status': 'running',
+            'startedAt': firestore.SERVER_TIMESTAMP,
+            'updatedAt': firestore.SERVER_TIMESTAMP
+        })
+        print(f"🔄 Updated workflow {workflow_id} to 'running'")
+
+        # Import and run the orchestrator
+        print(f"🤖 Executing orchestrator for workflow {workflow_id}...")
+        print()
+
+        # CRITICAL: Orchestrator uses module-level constants, so we set them here
+        import orchestrator.orchestrator as orchestrator_module
+
+        repo_owner = repo.split('/')[0]
+        repo_name = repo.split('/')[1]
+
+        orchestrator_module.REPO_OWNER = repo_owner
+        orchestrator_module.REPO_NAME = repo_name
+
+        print(f"📝 Configured orchestrator:")
+        print(f"   REPO_OWNER: {repo_owner}")
+        print(f"   REPO_NAME: {repo_name}")
+        print()
+
+        from orchestrator.orchestrator import run_full_test_repair_and_generation_workflow
+
+        # Run the workflow (takes no parameters - uses module constants)
+        result = await run_full_test_repair_and_generation_workflow()
+
+        # Update status to completed
+        firestore_client.collection('workflows').document(workflow_id).update({
+            'status': 'completed',
+            'completedAt': firestore.SERVER_TIMESTAMP,
+            'updatedAt': firestore.SERVER_TIMESTAMP,
+            'result': result
+        })
+
+        print()
+        print("============================================================")
+        print(f"✅ Workflow {workflow_id} completed successfully")
+        print("============================================================")
+        print()
+
+    except Exception as e:
+        error_msg = str(e)
+        print()
+        print("============================================================")
+        print(f"❌ Workflow {workflow_id} failed: {error_msg}")
+        print("============================================================")
+        print()
+
+        # Update status to failed
+        firestore_client.collection('workflows').document(workflow_id).update({
+            'status': 'failed',
+            'error': error_msg,
+            'failedAt': firestore.SERVER_TIMESTAMP,
+            'updatedAt': firestore.SERVER_TIMESTAMP
+        })
+
+        raise
+
+
+@app.post("/pubsub/push")
+async def pubsub_push_handler(request: Request):
+    """
+    Handle Pub/Sub push messages.
+
+    Pub/Sub sends messages in this format:
+    {
+        "message": {
+            "data": "base64-encoded-json",
+            "messageId": "...",
+            "publishTime": "..."
+        },
+        "subscription": "..."
+    }
+    """
+    try:
+        # Parse the Pub/Sub message
+        envelope = await request.json()
+
+        if 'message' not in envelope:
+            raise HTTPException(
+                status_code=400, detail="Invalid Pub/Sub message format")
+
+        message = envelope['message']
+
+        # Decode the base64-encoded data
+        if 'data' not in message:
+            raise HTTPException(
+                status_code=400, detail="No data in Pub/Sub message")
+
+        data = base64.b64decode(message['data']).decode('utf-8')
+        payload = json.loads(data)
+
+        print()
+        print("📥 Received workflow request via Pub/Sub push")
+        print(f"   Message ID: {message.get('messageId')}")
+        print(f"   Workflow ID: {payload.get('workflowId')}")
+        print()
+
+        # Extract workflow parameters
+        workflow_id = payload.get('workflowId')
+        repo = payload.get('repo')
+        branch = payload.get('branch')
+        commit_sha = payload.get('commitSha')
+
+        if not all([workflow_id, repo, branch, commit_sha]):
+            raise HTTPException(
+                status_code=400, detail="Missing required workflow parameters")
+
+        # Process the workflow (run in background to not block Pub/Sub ack)
+        # We return 200 immediately, then process
+        asyncio.create_task(run_orchestrator_workflow(
+            workflow_id, repo, branch, commit_sha))
+
+        # Return 200 OK to acknowledge the message
+        return {"status": "accepted", "workflowId": workflow_id}
+
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON in Pub/Sub message: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
+    except Exception as e:
+        print(f"❌ Error processing Pub/Sub message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Cloud Run."""
+    return {
+        "status": "healthy",
+        "service": "orchestrator-worker",
+        "project": PROJECT_ID
+    }
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "service": "Orchestrator Worker",
+        "status": "running",
+        "endpoints": {
+            "/pubsub/push": "Pub/Sub push endpoint",
+            "/health": "Health check"
+        }
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8082))
+    uvicorn.run(app, host="0.0.0.0", port=port)

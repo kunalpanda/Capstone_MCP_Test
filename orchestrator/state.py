@@ -103,6 +103,15 @@ class WorkflowState:
             "target_coverage": self.target_coverage,
         }
 
-    def save(self, path="workflow_state.json"):
-        with open(path, "w") as f:
-            json.dump(self.__dict__, f, indent=2)
+    async def save_to_firestore(self, workflow_id: str):
+        """
+        Save state to Firestore instead of local file.
+        
+        Args:
+            workflow_id: Unique workflow identifier
+        """
+        from orchestrator.firestore_client import get_firestore_client
+        
+        client = get_firestore_client()
+        await client.update_workflow(workflow_id, self.summary())
+        print(f"💾 Saved state to Firestore: {workflow_id}")
