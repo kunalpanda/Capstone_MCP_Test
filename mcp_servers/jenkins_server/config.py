@@ -1,17 +1,22 @@
 # mcp_servers/jenkins_server/config.py
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
-ENV_PATH = os.path.join(os.path.dirname(__file__), "../../.env")
-if not os.path.exists(ENV_PATH):
-    raise FileNotFoundError(f".env not found at expected path: {ENV_PATH}")
+# Try to load .env file if it exists (for local development)
+env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+    print(f"Loading .env from {env_path}")
+else:
+    # Running in Docker/Cloud Run - use environment variables directly
+    print("No .env file found - using environment variables")
 
-print(f"Loading .env from {ENV_PATH}")
-load_dotenv(ENV_PATH)
+# Get configuration from environment variables
+JENKINS_URL = os.getenv('JENKINS_URL', 'http://localhost:8080')
+JENKINS_USER = os.getenv('JENKINS_USER', 'admin')
+JENKINS_TOKEN = os.getenv('JENKINS_TOKEN')
 
-JENKINS_URL = os.getenv("JENKINS_URL", "http://localhost:8080")
-JENKINS_USER = os.getenv("JENKINS_USER")
-JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
-
-if not all([JENKINS_URL, JENKINS_USER, JENKINS_TOKEN]):
-    raise ValueError("Missing one or more Jenkins environment variables (URL, USER, TOKEN).")
+# Validate required variables
+if not JENKINS_TOKEN:
+    raise ValueError("JENKINS_TOKEN environment variable is required")

@@ -1,9 +1,10 @@
 # mcp_servers/github_server/server.py
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from . import tools
+import tools
 
 app = FastAPI(title="GitHub MCP JSON-RPC Server")
+
 
 @app.post("/")
 async def handle_rpc(request: Request):
@@ -52,3 +53,10 @@ async def root():
     import os
     branch = os.getenv("ACTIVE_BRANCH", "main")
     return {"message": f"GitHub MCP JSON-RPC Server running (active branch: {branch})"}
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+
+    port = int(os.getenv("PORT", 8010))
+    uvicorn.run(app, host="0.0.0.0", port=port)

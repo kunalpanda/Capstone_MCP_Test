@@ -1,12 +1,14 @@
 import os
 import httpx
 import base64
-from .config import GITHUB_TOKEN, GITHUB_API_URL
+from config import GITHUB_TOKEN, GITHUB_API_URL
 
 # Shared HTTP headers
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"}
 
 # === Branch enforcement helper (add below imports) ===
+
+
 def enforce_branch(kwargs: dict) -> dict:
     """
     Ensures every call includes a valid 'branch' or 'ref' value.
@@ -25,7 +27,6 @@ def enforce_branch(kwargs: dict) -> dict:
     return kwargs
 
 
-
 # =========================================================
 # 1️⃣  list_user_repos  →  List all repos for a user/org
 # =========================================================
@@ -34,7 +35,8 @@ async def list_user_repos(user: str):
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
         repos = [
             {
@@ -57,7 +59,8 @@ async def get_repo_info(owner: str, repo: str):
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
         data = res.json()
         return {
@@ -81,7 +84,8 @@ async def get_pr_details(owner: str, repo: str, pr_number: int):
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
         pr = res.json()
         return {
@@ -101,15 +105,19 @@ async def get_pr_details(owner: str, repo: str, pr_number: int):
 # =========================================================
 # 4️⃣  get_pr_diff  →  Retrieve patch/diff text for a PR
 # =========================================================
+
+
 async def get_pr_diff(owner: str, repo: str, pr_number: int):
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}"
     headers = HEADERS | {"Accept": "application/vnd.github.v3.diff"}
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=headers)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
-        return {"pr_number": pr_number, "diff": res.text[:8000]}  # truncate for LLM safety
+        # truncate for LLM safety
+        return {"pr_number": pr_number, "diff": res.text[:8000]}
 
 
 # =========================================================
@@ -121,11 +129,14 @@ async def get_file_tree(owner: str, repo: str, ref: str = "main"):
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
         data = res.json()
-        files = [f["path"] for f in data.get("tree", []) if f["type"] == "blob"]
-        return {"ref": ref, "count": len(files), "files": files[:2000]}  # cap for safety
+        files = [f["path"]
+                 for f in data.get("tree", []) if f["type"] == "blob"]
+        # cap for safety
+        return {"ref": ref, "count": len(files), "files": files[:2000]}
 
 
 # =========================================================
@@ -136,11 +147,13 @@ async def get_commit_diff(owner: str, repo: str, base: str, head: str):
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
         comp = res.json()
         changed_files = [
-            {"filename": f["filename"], "status": f["status"], "changes": f["changes"]}
+            {"filename": f["filename"], "status": f["status"],
+                "changes": f["changes"]}
             for f in comp.get("files", [])
         ]
         return {
@@ -149,10 +162,12 @@ async def get_commit_diff(owner: str, repo: str, base: str, head: str):
             "total_commits": comp["total_commits"],
             "changed_files": changed_files,
         }
-    
+
 # =========================================================
 # 7️⃣  get_file_content  →  Retrieve and decode file content
 # =========================================================
+
+
 async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
     """
     Returns the decoded source code for a given file path and branch/ref.
@@ -162,12 +177,14 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=HEADERS)
         if res.status_code != 200:
-            raise RuntimeError(f"GitHub returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"GitHub returned {res.status_code}: {res.text}")
 
         data = res.json()
 
         if data.get("encoding") == "base64":
-            content = base64.b64decode(data["content"]).decode("utf-8", errors="ignore")
+            content = base64.b64decode(data["content"]).decode(
+                "utf-8", errors="ignore")
         else:
             content = data.get("content", "")
 
@@ -183,10 +200,12 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
             "truncated": truncated,
             "content": content
         }
-    
+
 # =========================================================
 # 8️⃣  create_branch  →  Create a new branch
 # =========================================================
+
+
 async def create_branch(owner: str, repo: str, branch_name: str, from_branch: str = "main"):
     """
     Create a new branch from an existing branch.
@@ -197,21 +216,23 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
     async with httpx.AsyncClient() as client:
         ref_res = await client.get(ref_url, headers=HEADERS)
         if ref_res.status_code != 200:
-            raise RuntimeError(f"Failed to get source branch: {ref_res.status_code}: {ref_res.text}")
-        
+            raise RuntimeError(
+                f"Failed to get source branch: {ref_res.status_code}: {ref_res.text}")
+
         source_sha = ref_res.json()["object"]["sha"]
-        
+
         # Create the new branch
         create_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/refs"
         payload = {
             "ref": f"refs/heads/{branch_name}",
             "sha": source_sha
         }
-        
+
         create_res = await client.post(create_url, headers=HEADERS, json=payload)
         if create_res.status_code not in (200, 201):
-            raise RuntimeError(f"Failed to create branch: {create_res.status_code}: {create_res.text}")
-        
+            raise RuntimeError(
+                f"Failed to create branch: {create_res.status_code}: {create_res.text}")
+
         data = create_res.json()
         return {
             "branch_name": branch_name,
@@ -225,11 +246,11 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
 # 9️⃣  create_or_update_file  →  Create or update a file
 # =========================================================
 async def create_or_update_file(
-    owner: str, 
-    repo: str, 
-    path: str, 
-    content: str, 
-    message: str, 
+    owner: str,
+    repo: str,
+    path: str,
+    content: str,
+    message: str,
     branch: str = "main"
 ):
     """
@@ -240,20 +261,21 @@ async def create_or_update_file(
     # First, try to get the existing file to get its SHA
     file_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}"
     params = {"ref": branch}
-    
+
     async with httpx.AsyncClient() as client:
         get_res = await client.get(file_url, headers=HEADERS, params=params)
-        
+
         # Prepare the payload
         import base64
-        encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-        
+        encoded_content = base64.b64encode(
+            content.encode("utf-8")).decode("utf-8")
+
         payload = {
             "message": message,
             "content": encoded_content,
             "branch": branch
         }
-        
+
         # If file exists, include its SHA for update
         if get_res.status_code == 200:
             existing_file = get_res.json()
@@ -261,12 +283,13 @@ async def create_or_update_file(
             operation = "updated"
         else:
             operation = "created"
-        
+
         # Create or update the file
         put_res = await client.put(file_url, headers=HEADERS, json=payload)
         if put_res.status_code not in (200, 201):
-            raise RuntimeError(f"Failed to {operation} file: {put_res.status_code}: {put_res.text}")
-        
+            raise RuntimeError(
+                f"Failed to {operation} file: {put_res.status_code}: {put_res.text}")
+
         data = put_res.json()
         return {
             "operation": operation,
@@ -300,12 +323,13 @@ async def create_pull_request(
         "head": head,
         "base": base
     }
-    
+
     async with httpx.AsyncClient() as client:
         res = await client.post(url, headers=HEADERS, json=payload)
         if res.status_code not in (200, 201):
-            raise RuntimeError(f"Failed to create PR: {res.status_code}: {res.text}")
-        
+            raise RuntimeError(
+                f"Failed to create PR: {res.status_code}: {res.text}")
+
         pr = res.json()
         return {
             "number": pr["number"],
@@ -321,6 +345,8 @@ async def create_pull_request(
 # =========================================================
 # MCP tool list - COMPLETE DEFINITIONS WITH SCHEMAS
 # =========================================================
+
+
 async def list_tools():
     return {
         "tools": [

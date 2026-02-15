@@ -13,11 +13,14 @@ from orchestrator.state import WorkflowState
 # jenkins_utils REMOVED - Claude now interprets raw console logs directly (language-agnostic)
 from backend.event_emitter import EventEmitter
 
+from orchestrator.firestore_client import get_firestore_client, generate_workflow_id
+
 
 # ======================================
 # Configuration
 # ======================================
-ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY
+ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY.strip(
+) if settings.ANTHROPIC_API_KEY else None
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 PROMPT_FILE = "prompts/revised_prompt.txt"
 REPO_OWNER = "kunalpanda"
@@ -33,7 +36,7 @@ emitter = EventEmitter()
 async def call_claude(messages: list, tools: list = None, system: str = None, max_retries: int = 5):
     """
     Send messages to Claude 4.5 with native tool-use support.
-    
+
     Handles:
     - 429: Rate limit (waits for retry-after header)
     - 529: Overloaded (exponential backoff)
@@ -52,7 +55,7 @@ async def call_claude(messages: list, tools: list = None, system: str = None, ma
 
     if system:
         payload["system"] = system
-    
+
     if tools:
         payload["tools"] = tools
 
@@ -64,63 +67,69 @@ async def call_claude(messages: list, tools: list = None, system: str = None, ma
                     json=payload,
                     headers=headers
                 )
-                
+
                 # Handle rate limit (429)
                 if res.status_code == 429:
                     retry_after = int(res.headers.get("retry-after", 60))
-                    print(f"⚠️  Rate limit (429). Waiting {retry_after}s before retry {attempt + 1}/{max_retries}...")
-                    
+                    print(
+                        f"⚠️  Rate limit (429). Waiting {retry_after}s before retry {attempt + 1}/{max_retries}...")
+
                     if attempt < max_retries - 1:
                         await asyncio.sleep(retry_after)
                         continue
                     else:
-                        raise Exception("Rate limit exceeded after max retries")
-                
+                        raise Exception(
+                            "Rate limit exceeded after max retries")
+
                 # Handle overloaded (529)
                 if res.status_code == 529:
                     # Exponential backoff: 10s, 20s, 40s, 80s, 160s
                     wait_time = 10 * (2 ** attempt)
-                    print(f"⚠️  API overloaded (529). Waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
-                    
+                    print(
+                        f"⚠️  API overloaded (529). Waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
+
                     if attempt < max_retries - 1:
                         await asyncio.sleep(wait_time)
                         continue
                     else:
-                        raise Exception("API overloaded - max retries exceeded. Try again later.")
-                
+                        raise Exception(
+                            "API overloaded - max retries exceeded. Try again later.")
+
                 # Handle other errors
                 if res.status_code != 200:
                     print(f"❌ Claude API request failed.")
                     print(f"Status code: {res.status_code}")
                     print(f"Response: {res.text}")
                     res.raise_for_status()
-                    
+
                 return res.json()
-                
+
         except httpx.HTTPStatusError as e:
             # Re-raise if not a retryable error or max retries reached
             if e.response.status_code not in (429, 529) or attempt == max_retries - 1:
                 raise
             # Otherwise continue to next retry attempt
 
-async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list:  # Increased from 3
+
+# Increased from 3
+async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list:
     """Keep more recent context and include tool results in summary"""
     if len(messages) <= keep_recent + 2:
         return messages
-    
+
     # Keep initial message + last 6 exchanges (12 messages)
     initial_message = messages[0]
     old_messages = messages[1:-(keep_recent * 2)]
     recent_messages = messages[-(keep_recent * 2):]
-    
+
     # Create DETAILED summary including tool results
     summary_parts = []
     current_branch = None
     files_modified = []
-    
+
     for msg in old_messages:
         content = msg["content"]
-        
+
         # Extract key information
         if isinstance(content, list):
             for block in content:
@@ -134,7 +143,7 @@ async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list: 
                         if "path" in result_content and "operation" in result_content:
                             # Track files modified
                             pass
-    
+
     summary_message = {
         "role": "user",
         "content": f"""[WORKFLOW STATE SUMMARY]
@@ -144,18 +153,19 @@ async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list: 
         Key Results: {"\n".join(summary_parts[:15])}
         """
     }
-    
+
     return [initial_message, summary_message] + recent_messages
+
 
 def truncate_tool_results(messages: list, max_result_length: int = 55000) -> list:
     """
     Truncate large tool results to prevent token overflow.
-    
+
     Note: Increased to 55k to accommodate 50k console logs from Jenkins.
     Claude can handle ~100k tokens per request, so 55k chars (~14k tokens) is safe.
     """
     truncated_messages = []
-    
+
     for msg in messages:
         if msg["role"] == "user" and isinstance(msg["content"], list):
             # Process tool results
@@ -165,20 +175,21 @@ def truncate_tool_results(messages: list, max_result_length: int = 55000) -> lis
                     content = block.get("content", "")
                     if isinstance(content, str) and len(content) > max_result_length:
                         truncated_block = block.copy()
-                        truncated_block["content"] = content[:max_result_length] + "\n\n[... truncated for length]"
+                        truncated_block["content"] = content[:max_result_length] + \
+                            "\n\n[... truncated for length]"
                         truncated_content.append(truncated_block)
                     else:
                         truncated_content.append(block)
                 else:
                     truncated_content.append(block)
-            
+
             truncated_messages.append({
                 "role": msg["role"],
                 "content": truncated_content
             })
         else:
             truncated_messages.append(msg)
-    
+
     return truncated_messages
 
 # ======================================
@@ -189,6 +200,8 @@ def truncate_tool_results(messages: list, max_result_length: int = 55000) -> lis
 # ======================================
 # Dynamic Tool Discovery from MCP Servers
 # ======================================
+
+
 async def fetch_all_tools():
     """
     Dynamically fetch tool definitions from all MCP servers.
@@ -196,53 +209,56 @@ async def fetch_all_tools():
     """
     all_tools = []
     tool_to_server = {}  # Maps tool_name -> server_url
-    
+
     # Define MCP servers to query
     mcp_servers = [
         {"name": "GitHub", "url": settings.GITHUB_MCP_URL},
         {"name": "Jenkins", "url": settings.JENKINS_MCP_URL},
     ]
-    
+
     try:
         for server in mcp_servers:
             server_name = server["name"]
             server_url = server["url"]
-            
+
             print(f"🔧 Fetching tools from {server_name} MCP server...")
-            
+
             try:
                 response = await call_mcp_tool(
                     server_url=server_url,
                     method="tools/list"
                 )
-                
+
                 if "result" in response and "tools" in response["result"]:
                     server_tools = response["result"]["tools"]
                     all_tools.extend(server_tools)
-                    
+
                     # Build routing map: tool_name -> server_url
                     for tool in server_tools:
                         tool_name = tool["name"]
                         if tool_name in tool_to_server:
-                            print(f"   ⚠️  Warning: Tool '{tool_name}' provided by multiple servers")
+                            print(
+                                f"   ⚠️  Warning: Tool '{tool_name}' provided by multiple servers")
                         tool_to_server[tool_name] = server_url
-                    
-                    print(f"   ✅ Loaded {len(server_tools)} tools from {server_name}")
+
+                    print(
+                        f"   ✅ Loaded {len(server_tools)} tools from {server_name}")
                 else:
-                    print(f"   ⚠️  No tools found in response from {server_name}")
-                    
+                    print(
+                        f"   ⚠️  No tools found in response from {server_name}")
+
             except Exception as e:
                 print(f"   ❌ Failed to fetch tools from {server_name}: {e}")
                 continue
-        
+
         print(f"📦 Total tools available: {len(all_tools)}\n")
         return all_tools, tool_to_server
-        
+
     except Exception as e:
         print(f"❌ Failed to fetch tools from MCP servers: {e}")
         print("💡 Falling back to empty tool list - workflow may fail")
         return [], {}
-    
+
 
 def enforce_branch(params: dict) -> dict:
     """
@@ -266,6 +282,7 @@ def enforce_branch(params: dict) -> dict:
 
     return params
 
+
 async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: str):
     """
     After workflow completion, search for PR from the branch and fetch its summary.
@@ -275,18 +292,18 @@ async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: st
         # Step 1: List open PRs for the repo to find PR number
         # Note: GitHub MCP doesn't have list_prs, so we'll search by branch
         # We can infer the PR was just created, so it should be the latest
-        
+
         # Alternative: Track PR number when it's created
         # For now, let's use the state to track it
-        
+
         if not state.pr_number:
             print("ℹ️  No PR number tracked - PR may not have been created")
             return None
-        
+
         print(f"\n{'='*60}")
         print(f"📥 Fetching PR #{state.pr_number} summary...")
         print(f"{'='*60}")
-        
+
         # Fetch PR details using existing GitHub MCP tool
         pr_details = await call_mcp_tool(
             server_url=settings.GITHUB_MCP_URL,
@@ -298,13 +315,13 @@ async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: st
                 "pr_number": state.pr_number
             }
         )
-        
+
         if "result" not in pr_details:
             print("❌ Failed to fetch PR details")
             return None
-        
+
         pr = pr_details["result"]
-        
+
         # Display in CLI
         print(f"\n📋 PULL REQUEST SUMMARY")
         print(f"{'='*60}")
@@ -316,7 +333,7 @@ async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: st
         print(f"{'-'*60}")
         print(pr['body'])
         print(f"{'='*60}\n")
-        
+
         # Emit to dashboard
         await emitter.emit_pr_summary(
             pr_number=pr['number'],
@@ -326,17 +343,18 @@ async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: st
             branch=pr['head_branch'],
             iteration=state.iteration
         )
-        
+
         return pr
-        
+
     except Exception as e:
         print(f"⚠️  Could not fetch PR summary: {e}")
         return None
-    
+
+
 async def fetch_baseline_coverage(job_name: str) -> dict:
     """
     Fetch initial coverage report from Jenkins to establish baseline.
-    
+
     Returns:
         Dictionary with coverage data or empty dict if unavailable
     """
@@ -344,7 +362,7 @@ async def fetch_baseline_coverage(job_name: str) -> dict:
         print(f"\n{'='*60}")
         print("📊 FETCHING BASELINE COVERAGE")
         print(f"{'='*60}")
-        
+
         # Call Jenkins MCP to get coverage
         result = await call_mcp_tool(
             server_url=settings.JENKINS_MCP_URL,
@@ -352,10 +370,10 @@ async def fetch_baseline_coverage(job_name: str) -> dict:
             name="get_coverage_report",
             params={"job_name": job_name}
         )
-        
+
         if "result" in result:
             coverage_result = result["result"]
-            
+
             if coverage_result.get("coverage_available"):
                 coverage = coverage_result.get("coverage", {})
                 print(f"✅ Baseline coverage retrieved:")
@@ -365,33 +383,44 @@ async def fetch_baseline_coverage(job_name: str) -> dict:
                 print(f"{'='*60}\n")
                 return coverage
             else:
-                print(f"⚠️  {coverage_result.get('message', 'No coverage data available')}")
+                print(
+                    f"⚠️  {coverage_result.get('message', 'No coverage data available')}")
                 print(f"{'='*60}\n")
                 return {}
         else:
             print(f"⚠️  Failed to fetch coverage: {result}")
             print(f"{'='*60}\n")
             return {}
-            
+
     except Exception as e:
         print(f"❌ Error fetching baseline coverage: {e}")
         print(f"{'='*60}\n")
         return {}
 
 
-
 # =========================================================
 # GENERATION WORKFLOW ENTRY
 # =========================================================
-async def run_full_test_repair_and_generation_workflow():
+async def run_full_test_repair_and_generation_workflow(
+    workflow_id: str = None,
+    repo: str = None,
+    branch: str = None,
+    commit_sha: str = None
+):
     """
     Complete autonomous CI/CD cycle:
     1. Identify failing tests on main branch via Jenkins
     2. Analyze repository structure & failures
-    3. Fix failing tests (test files only)
+    3. Fix failing tests (test files only, never edit implementation)
     4. Generate new integration tests
     5. Verify via Jenkins
     6. Document results & reasoning
+
+    Args:
+        workflow_id: Pre-generated workflow ID from webhook (optional)
+        repo: Repository full name (e.g., "kunalpanda/test_banking_app")
+        branch: Branch name to work on
+        commit_sha: Commit SHA from webhook
     """
 
     await emitter.emit_workflow_start(
@@ -401,12 +430,36 @@ async def run_full_test_repair_and_generation_workflow():
         max_iterations=50
     )
 
-    await emitter.emit_workflow_start(
-        repo_owner=REPO_OWNER,
-        repo_name=REPO_NAME,
-        branch="main",
-        max_iterations=50
-    )
+    # === Use provided workflow ID or generate new one ===
+    if not workflow_id:
+        # Generate workflow ID if not provided (for local/manual runs)
+        workflow_id = generate_workflow_id(
+            repo=f"{REPO_OWNER}/{REPO_NAME}",
+            branch="main",
+            commit_sha="initial-run"
+        )
+        print(f"⚠️  No workflow_id provided - generated: {workflow_id}")
+    else:
+        print(f"✅ Using provided workflow_id: {workflow_id}")
+
+    print(f"\n{'='*60}")
+    print(f"🆔 Workflow ID: {workflow_id}")
+    print(f"{'='*60}\n")
+
+    # Get Firestore client
+    firestore_client = get_firestore_client(project_id=settings.PROJECT_ID)
+
+    # Create initial workflow record in Firestore
+    # NOTE: Webhook handler no longer creates this - orchestrator does it
+    await firestore_client.create_workflow(workflow_id, {
+        'repo': f"{REPO_OWNER}/{REPO_NAME}",
+        'branch': 'main',
+        'commitSha': commit_sha or 'initial-run',
+        'status': 'running',
+        'phase': state.phase,
+        'iteration': 0,
+        'triggeredBy': 'webhook' if commit_sha else 'manual'
+    })
 
     # Initialize baseline_coverage variable BEFORE try block
     baseline_coverage = {}
@@ -418,9 +471,11 @@ async def run_full_test_repair_and_generation_workflow():
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="trigger_build",
-            params={"job_name": "test_banking_app", "parameters": {"BRANCH": "main"}}
+            params={"job_name": "test_banking_app",
+                    "parameters": {"BRANCH": "main"}}
         )
-        print(f"✅ Triggered main branch build: {json.dumps(trigger_resp, indent=2)}")
+        print(
+            f"✅ Triggered main branch build: {json.dumps(trigger_resp, indent=2)}")
 
         # Step 2: Retrieve latest build info
         build_info = await call_mcp_tool(
@@ -431,7 +486,8 @@ async def run_full_test_repair_and_generation_workflow():
         )
 
         if "result" not in build_info:
-            raise RuntimeError(f"Unexpected response from Jenkins MCP: {build_info}")
+            raise RuntimeError(
+                f"Unexpected response from Jenkins MCP: {build_info}")
 
         build_number = build_info["result"]["build_number"]
         build_status = build_info["result"]["status"]
@@ -454,18 +510,21 @@ async def run_full_test_repair_and_generation_workflow():
         )
 
         if "result" not in build_completion:
-            raise RuntimeError(f"Unexpected response from wait_for_build_completion: {build_completion}")
+            raise RuntimeError(
+                f"Unexpected response from wait_for_build_completion: {build_completion}")
 
         # Update build_status based on the completed build
         build_status = build_completion["result"]["result"]
-        print(f"📄 Jenkins build #{build_number} completed with status: {build_status}")
+        print(
+            f"📄 Jenkins build #{build_number} completed with status: {build_status}")
 
         # Step 3: Get test results
         test_results = await call_mcp_tool(
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="get_test_results",
-            params={"job_name": "test_banking_app", "build_number": build_number}
+            params={"job_name": "test_banking_app",
+                    "build_number": build_number}
         )
         print(f"🧪 Test Results: {json.dumps(test_results, indent=2)[:800]}...")
 
@@ -479,7 +538,7 @@ async def run_full_test_repair_and_generation_workflow():
             "INITIAL_BUILD": build_number,
             "INITIAL_STATUS": build_status,
             "TEST_RESULTS": json.dumps(test_results["result"], indent=2) if "result" in test_results else "{}",
-            
+
             # Coverage metrics
             "TARGET_LINE_COVERAGE": settings.TARGET_LINE_COVERAGE,
             "TARGET_BRANCH_COVERAGE": settings.TARGET_BRANCH_COVERAGE,
@@ -515,24 +574,26 @@ async def run_full_test_repair_and_generation_workflow():
             "method": settings.TARGET_METHOD_COVERAGE
         }
         print(f"🎯 Coverage targets set: Line={settings.TARGET_LINE_COVERAGE}%, "
-            f"Branch={settings.TARGET_BRANCH_COVERAGE}%, "
-            f"Method={settings.TARGET_METHOD_COVERAGE}%")
-        
+              f"Branch={settings.TARGET_BRANCH_COVERAGE}%, "
+              f"Method={settings.TARGET_METHOD_COVERAGE}%")
+
         # Fetch baseline coverage from Jenkins
         baseline_coverage = await fetch_baseline_coverage(job_name="test_banking_app")
         if baseline_coverage:
             state.update_coverage(baseline_coverage)
             print(state.get_coverage_summary())
-            
+
         # Emit initial coverage to frontend
         await emitter.emit_state_update(state.summary())
 
         print("\n🧠 Launching full repair + generation workflow...\n")
         await run_conversation_with_tools(
-            prompt, 
-            max_iterations=50, 
+            prompt,
+            max_iterations=50,
             tools=tools,
-            tool_to_server=tool_to_server  # Pass routing map
+            tool_to_server=tool_to_server,  # Pass routing map
+            workflow_id=workflow_id,        # Pass workflow ID
+            firestore_client=firestore_client  # Pass Firestore client
         )
 
     except Exception as e:
@@ -547,20 +608,21 @@ async def run_full_test_repair_and_generation_workflow():
         raise
 
 
-
 # ======================================
 # Main Orchestration Loop with Tool Execution
 # ======================================
 async def run_conversation_with_tools(
-        initial_prompt: str, 
-        max_iterations: int = 50, 
-        tools: list = None, 
-        tool_to_server: dict = None
-        ):
+        initial_prompt: str,
+        max_iterations: int = 50,
+        tools: list = None,
+        tool_to_server: dict = None,
+        workflow_id: str = None,
+        firestore_client=None
+):
     """
     Run a multi-turn conversation with Claude, executing tools as requested.
     Now with message management to avoid rate limits.
-    
+
     Args:
         initial_prompt: The initial prompt to send to Claude
         max_iterations: Maximum number of conversation turns
@@ -572,7 +634,7 @@ async def run_conversation_with_tools(
         tools, tool_to_server = await fetch_all_tools()
         if not tools or not tool_to_server:
             raise RuntimeError("Failed to fetch tools from MCP servers")
-    
+
     # Initial message
     messages = [
         {
@@ -580,7 +642,7 @@ async def run_conversation_with_tools(
             "content": initial_prompt
         }
     ]
-    
+
     system_prompt = (
         "You are an autonomous agent for software test analysis and improvement. "
         "CRITICAL STATE TRACKING:\n"
@@ -592,9 +654,9 @@ async def run_conversation_with_tools(
         "Use the provided tools to explore repositories and analyze CI/CD pipelines. "
         "Be concise but track state carefully."
     )
-    
+
     iteration = 0
-    
+
     while iteration < max_iterations:
         iteration += 1
         print(f"\n{'='*60}")
@@ -602,36 +664,49 @@ async def run_conversation_with_tools(
         print(f"{'='*60}")
 
         await emitter.emit_iteration_start(iteration, max_iterations)
-        
+
+        # === Update Firestore at start of iteration ===
+        if firestore_client and workflow_id:
+            await firestore_client.update_workflow(workflow_id, {
+                'iteration': iteration,
+                'phase': state.phase,
+                'status': 'running'
+            })
+
         # Truncate large tool results BEFORE sending
         messages = truncate_tool_results(messages)
-        
+
         # Summarize old messages if conversation is getting long
         if len(messages) > 10:
-            print(f"📊 Message count: {len(messages)} - Summarizing old messages...")
+            print(
+                f"📊 Message count: {len(messages)} - Summarizing old messages...")
             messages = await summarize_old_messages(messages, keep_recent=3)
             print(f"📊 After summarization: {len(messages)} messages")
-        
+
         # Call Claude with retry logic
         print(f"🤖 Calling Claude (iteration {iteration})...")
         try:
             response = await call_claude(messages, tools=tools, system=system_prompt)
+            # === Save context after Claude response ===
+            if firestore_client and workflow_id:
+                await firestore_client.save_context(workflow_id, messages)
+
         except Exception as e:
             print(f"❌ Failed to call Claude: {e}")
             print(f"💡 Consider reducing max_iterations or message history length")
             break
-        
+
         # Add Claude's response to message history
         assistant_message = {
             "role": "assistant",
             "content": response["content"]
         }
         messages.append(assistant_message)
-        
+
         # Check stop reason
         stop_reason = response.get("stop_reason")
         print(f"⏸️  Stop reason: {stop_reason}")
-        
+
         # Display text content
         for block in response["content"]:
             if block["type"] == "text":
@@ -641,30 +716,31 @@ async def run_conversation_with_tools(
                     print(f"\n💬 Claude says:\n{text[:500]}...\n[truncated]\n")
                 else:
                     print(f"\n💬 Claude says:\n{text}\n")
-        
+
         await emitter.emit_claude_response(
             iteration=iteration,
             stop_reason=stop_reason,
             content=response["content"]
         )
-        
+
         # If no tool use, we're done
         if stop_reason == "end_turn":
             print("✅ Conversation complete - no more tool requests")
             break
-        
+
         # Process tool calls
         if stop_reason == "tool_use":
             tool_results = []
-            
+
             for block in response["content"]:
                 if block["type"] == "tool_use":
                     tool_name = block["name"]
                     tool_input = block["input"]
                     tool_use_id = block["id"]
-                    
+
                     print(f"\n⚙️  Tool requested: {tool_name}")
-                    print(f"📦 Input: {json.dumps(tool_input, indent=2)[:200]}...")
+                    print(
+                        f"📦 Input: {json.dumps(tool_input, indent=2)[:200]}...")
 
                     await emitter.emit_tool_call(
                         iteration=iteration,
@@ -672,14 +748,15 @@ async def run_conversation_with_tools(
                         tool_input=tool_input,
                         tool_use_id=tool_use_id
                     )
-                    
+
                     try:
                         # Route to appropriate MCP server dynamically
                         server_url = tool_to_server.get(tool_name)
-                        
+
                         if server_url is None:
-                            raise ValueError(f"Unknown tool '{tool_name}' - not provided by any MCP server")
-                        
+                            raise ValueError(
+                                f"Unknown tool '{tool_name}' - not provided by any MCP server")
+
                         # Call the MCP server
                         mcp_response = await call_mcp_tool(
                             server_url=server_url,
@@ -688,40 +765,46 @@ async def run_conversation_with_tools(
                             params=enforce_branch(tool_input)
                         )
 
-                        
                         # Extract result from JSON-RPC response
                         if "result" in mcp_response:
                             result = mcp_response["result"]
-                            
+
                             # === Branch tracking ===
                             if tool_name == "create_branch" and "branch_name" in result:
                                 state.branch = result["branch_name"]
-                                print(f"🔀 Updated active branch -> {state.branch}")
+                                print(
+                                    f"🔀 Updated active branch -> {state.branch}")
 
                             elif tool_name == "create_or_update_file" and "branch" in result:
                                 state.branch = result["branch"]
-                                print(f"📝 File modified on branch -> {state.branch}")
+                                print(
+                                    f"📝 File modified on branch -> {state.branch}")
 
                             elif tool_name == "trigger_build" and "parameters" in tool_input:
-                                branch_param = tool_input["parameters"].get("BRANCH")
+                                branch_param = tool_input["parameters"].get(
+                                    "BRANCH")
                                 if branch_param:
                                     state.branch = branch_param
-                                    print(f"🏗️ Build triggered for branch -> {state.branch}")
+                                    print(
+                                        f"🏗️ Build triggered for branch -> {state.branch}")
                             elif tool_name == "create_pull_request" and "number" in result:
                                 state.pr_number = result.get("number")
-                                print(f"📝 PR #{state.pr_number} created - will fetch summary after workflow")
+                                print(
+                                    f"📝 PR #{state.pr_number} created - will fetch summary after workflow")
 
                             # CONSOLE OUTPUT: Pass raw log directly to Claude (language-agnostic)
                             # The Jenkins MCP server now handles smart truncation at 50k chars
                             # Claude interprets the raw output - no regex parsing needed
                             if tool_name == "get_console_output" and "log" in result:
-                                log_length = result.get("total_length", len(result["log"]))
+                                log_length = result.get(
+                                    "total_length", len(result["log"]))
                                 truncated = result.get("truncated", False)
-                                
+
                                 print(f"\n📋 JENKINS CONSOLE LOG:")
                                 print(f"   Total length: {log_length:,} chars")
                                 print(f"   Truncated: {truncated}")
-                                print(f"   Note: Raw log passed to Claude for language-agnostic analysis")
+                                print(
+                                    f"   Note: Raw log passed to Claude for language-agnostic analysis")
 
                             # COVERAGE TRACKING: Update state when Claude checks coverage
                             if tool_name == "get_coverage_report" and "coverage" in result:
@@ -730,20 +813,22 @@ async def run_conversation_with_tools(
                                     state.update_coverage(coverage)
                                     print(f"\n📊 COVERAGE UPDATE:")
                                     print(state.get_coverage_summary())
-                                    
+
                                     # Emit updated coverage to frontend
                                     await emitter.emit_state_update(state.summary())
                                 else:
-                                    print(f"\n⚠️  Coverage not available: {result.get('message', 'Unknown reason')}")
-                            
+                                    print(
+                                        f"\n⚠️  Coverage not available: {result.get('message', 'Unknown reason')}")
+
                             result_str = json.dumps(result)
-                            
+
                             # Log truncated result
                             if len(result_str) > 300:
-                                print(f"✅ Success: {result_str[:300]}... [truncated]")
+                                print(
+                                    f"✅ Success: {result_str[:300]}... [truncated]")
                             else:
                                 print(f"✅ Success: {result_str}")
-                            
+
                             await emitter.emit_tool_result(
                                 iteration=iteration,
                                 tool_name=tool_name,
@@ -767,14 +852,14 @@ async def run_conversation_with_tools(
 
                         else:
                             result = mcp_response
-                        
+
                         # Add to tool results
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_use_id,
                             "content": json.dumps(result)
                         })
-                        
+
                     except Exception as e:
                         print(f"❌ Tool execution failed: {e}")
                         tool_results.append({
@@ -782,20 +867,25 @@ async def run_conversation_with_tools(
                             "tool_use_id": tool_use_id,
                             "content": json.dumps({"error": str(e)})
                         })
-            
+
             # Send tool results back to Claude
             if tool_results:
                 messages.append({
                     "role": "user",
                     "content": tool_results
                 })
-                print(f"📨 Sending {len(tool_results)} tool result(s) back to Claude...")
+                print(
+                    f"📨 Sending {len(tool_results)} tool result(s) back to Claude...")
+
+                # === Save context after tool results ===
+                if firestore_client and workflow_id:
+                    await firestore_client.save_context(workflow_id, messages)
 
                 await emitter.emit_state_update(state.summary())
         else:
             print(f"⚠️  Unexpected stop reason: {stop_reason}")
             break
-    
+
     print(f"\n{'='*60}")
     print(f"Completed after {iteration} iterations")
     print(f"📊 Final message count: {len(messages)}")
@@ -810,11 +900,22 @@ async def run_conversation_with_tools(
         state.pr_summary = pr_summary
 
     await emitter.emit_workflow_complete(
-    total_iterations=iteration,
-    success=(iteration < max_iterations),
-    reason="max_iterations_reached" if iteration >= max_iterations else "workflow_complete"
+        total_iterations=iteration,
+        success=(iteration < max_iterations),
+        reason="max_iterations_reached" if iteration >= max_iterations else "workflow_complete"
     )
-    
+
+    # === Update final status in Firestore ===
+    if firestore_client and workflow_id:
+        final_status = 'completed' if iteration < max_iterations else 'failed'
+        await firestore_client.update_workflow(workflow_id, {
+            'status': final_status,
+            'iteration': iteration,
+            'prNumber': state.pr_number
+        })
+
+        print(f"💾 Final workflow status: {final_status}")
+
     return messages
 
 if __name__ == "__main__":
