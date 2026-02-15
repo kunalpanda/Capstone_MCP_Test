@@ -7,11 +7,12 @@ export class WebSocketService {
   private reconnectDelay = 2000;
   private listeners: ((event: BaseEvent) => void)[] = [];
   
-  constructor(private url: string = 'ws://localhost:8000/ws') {}
+  constructor(private url: string = 'wss://backend-websocket-ehv6woqt4q-uc.a.run.app/ws') {}
   
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
+        console.log('🔌 Connecting to WebSocket:', this.url);
         this.ws = new WebSocket(this.url);
         
         this.ws.onopen = () => {

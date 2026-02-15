@@ -1,12 +1,16 @@
 # mcp_servers/jenkins_server/tools.py
+from typing import Optional
+import asyncio
 import httpx
-from .config import JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
-import asyncio 
+from config import JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
+import asyncio
 
 # Jenkins requires basic authentication
 AUTH = (JENKINS_USER, JENKINS_TOKEN)
 
 # === Helper: enforce branch parameter for all builds ===
+
+
 def enforce_branch_param(parameters: dict | None) -> dict:
     """
     Ensures every Jenkins build has a BRANCH parameter.
@@ -34,7 +38,8 @@ async def trigger_build(job_name: str, parameters: dict = None):
     async with httpx.AsyncClient(auth=AUTH) as client:
         res = await client.post(url, params=parameters)
         if res.status_code not in (200, 201, 202):
-            raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"Jenkins returned {res.status_code}: {res.text}")
 
         queue_url = res.headers.get("Location")
         build_number = None
@@ -59,8 +64,6 @@ async def trigger_build(job_name: str, parameters: dict = None):
     }
 
 
-
-
 # =========================================================
 # 2️⃣ get_queue_info → Check Jenkins queue
 # =========================================================
@@ -83,7 +86,8 @@ async def get_build_info(job_name: str):
     async with httpx.AsyncClient(auth=AUTH) as client:
         res = await client.get(url)
         if res.status_code != 200:
-            raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
+            raise RuntimeError(
+                f"Jenkins returned {res.status_code}: {res.text}")
         data = res.json()
     return {
         "job_name": job_name,
@@ -100,32 +104,32 @@ async def get_build_info(job_name: str):
 def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
     """
     Intelligently truncate console logs to preserve the most useful information.
-    
+
     Strategy:
     - Keep head (20%) for build setup, checkout info
     - Keep tail (80%) for test results, errors, and summary
-    
+
     This is language-agnostic - Claude interprets the raw output.
     """
     total_length = len(log)
-    
+
     if total_length <= max_chars:
         return {
             "log": log,
             "truncated": False,
             "total_length": total_length
         }
-    
+
     # 20% head (checkout, setup), 80% tail (test results, errors)
     head_size = max_chars // 5      # 10k chars - setup/checkout
     tail_size = (max_chars * 4) // 5  # 40k chars - test results, summary
-    
+
     head = log[:head_size]
     tail = log[-tail_size:]
-    
+
     omitted = total_length - max_chars
     truncation_notice = f"\n\n{'='*60}\n[... {omitted:,} characters omitted ...]\n{'='*60}\n\n"
-    
+
     return {
         "log": head + truncation_notice + tail,
         "truncated": True,
@@ -138,7 +142,7 @@ def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
 async def get_console_output(job_name: str, build_number: int):
     """
     Fetch Jenkins console log for a specific build.
-    
+
     Returns raw log with smart truncation (50k char limit).
     The LLM interprets the output directly - no regex parsing.
     This approach is language-agnostic and works for any test framework.
@@ -147,11 +151,12 @@ async def get_console_output(job_name: str, build_number: int):
     async with httpx.AsyncClient(auth=AUTH) as client:
         res = await client.get(url)
         if res.status_code != 200:
-            raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
-    
+            raise RuntimeError(
+                f"Jenkins returned {res.status_code}: {res.text}")
+
     # Smart truncation preserving head (setup) + tail (results)
     truncation_result = smart_truncate_log(res.text, max_chars=50000)
-    
+
     return {
         "job_name": job_name,
         "build_number": build_number,
@@ -161,12 +166,11 @@ async def get_console_output(job_name: str, build_number: int):
         "note": "Raw console log provided. Analyze for test results, failures, errors, and coverage information."
     }
 
-import asyncio
-from typing import Optional
 
 # =========================================================
 # wait_for_build_completion → Poll Jenkins until a build finishes
 # =========================================================
+
 async def wait_for_build_completion(
     job_name: str,
     build_number: int,
@@ -178,7 +182,8 @@ async def wait_for_build_completion(
     Waits for a Jenkins build to complete.
     Retries up to `max_retries` times on HTTP 404 (build not yet created).
     """
-    import asyncio, time
+    import asyncio
+    import time
     start = time.time()
     url = f"{JENKINS_URL}/job/{job_name}/{build_number}/api/json"
 
@@ -194,27 +199,32 @@ async def wait_for_build_completion(
                         raise RuntimeError(
                             f"Build #{build_number} not found after {max_retries} retries."
                         )
-                    print(f"⚠️ Build #{build_number} not yet created (404). Retry {retries}/{max_retries} in {poll_interval}s...")
+                    print(
+                        f"⚠️ Build #{build_number} not yet created (404). Retry {retries}/{max_retries} in {poll_interval}s...")
                     await asyncio.sleep(poll_interval)
                     continue
 
                 if res.status_code != 200:
-                    raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
+                    raise RuntimeError(
+                        f"Jenkins returned {res.status_code}: {res.text}")
 
                 data = res.json()
                 if data.get("building", False):
                     elapsed = int(time.time() - start)
-                    print(f"⏳ Build #{build_number} still running... ({elapsed}s elapsed)")
+                    print(
+                        f"⏳ Build #{build_number} still running... ({elapsed}s elapsed)")
                     await asyncio.sleep(poll_interval)
                     if elapsed > timeout_seconds:
-                        raise TimeoutError(f"Timed out after {timeout_seconds}s waiting for build #{build_number}")
+                        raise TimeoutError(
+                            f"Timed out after {timeout_seconds}s waiting for build #{build_number}")
                     continue
 
                 # Completed successfully or failed
                 result = data.get("result", "UNKNOWN")
                 duration = data.get("duration", 0)
                 elapsed = int(time.time() - start)
-                print(f"✅ Build #{build_number} finished with status: {result}")
+                print(
+                    f"✅ Build #{build_number} finished with status: {result}")
                 return {
                     "status": "completed",
                     "job_name": job_name,
@@ -228,8 +238,10 @@ async def wait_for_build_completion(
             except httpx.RequestError as e:
                 retries += 1
                 if retries > max_retries:
-                    raise RuntimeError(f"Failed after {max_retries} retries: {str(e)}")
-                print(f"⚠️ Request error: {e}. Retry {retries}/{max_retries} in {poll_interval}s...")
+                    raise RuntimeError(
+                        f"Failed after {max_retries} retries: {str(e)}")
+                print(
+                    f"⚠️ Request error: {e}. Retry {retries}/{max_retries} in {poll_interval}s...")
                 await asyncio.sleep(poll_interval)
 
 
@@ -246,12 +258,12 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
         build_path = f"{build_number}"
     else:
         build_path = "lastBuild"
-    
+
     url = f"{JENKINS_URL}/job/{job_name}/{build_path}/testReport/api/json"
-    
+
     async with httpx.AsyncClient(auth=AUTH) as client:
         res = await client.get(url)
-        
+
         # Test results might not exist if no tests ran
         if res.status_code == 404:
             return {
@@ -260,12 +272,13 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
                 "status": "no_tests",
                 "message": "No test results available for this build"
             }
-        
+
         if res.status_code != 200:
-            raise RuntimeError(f"Jenkins returned {res.status_code}: {res.text}")
-        
+            raise RuntimeError(
+                f"Jenkins returned {res.status_code}: {res.text}")
+
         data = res.json()
-        
+
         # Parse test results
         failed_tests = []
         if data.get("failCount", 0) > 0:
@@ -280,7 +293,7 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
                             "error_message": case.get("errorDetails"),
                             "error_stacktrace": case.get("errorStackTrace")
                         })
-        
+
         return {
             "job_name": job_name,
             "build_number": build_number or "last",
@@ -291,15 +304,16 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
             "duration": data.get("duration", 0),
             "failed_tests": failed_tests[:20]  # Limit to first 20 failures
         }
-    
+
+
 async def get_coverage_report(job_name: str, build_number: int = None):
     """
     Retrieve test coverage metrics from Jenkins JaCoCo plugin.
-    
+
     Args:
         job_name: Jenkins job name
         build_number: Build number (optional, defaults to latest build)
-    
+
     Returns:
         Coverage percentages for line, branch, method, class, and instruction coverage
     """
@@ -308,21 +322,21 @@ async def get_coverage_report(job_name: str, build_number: int = None):
         url = f"{JENKINS_URL}/job/{job_name}/lastBuild/api/json"
     else:
         url = f"{JENKINS_URL}/job/{job_name}/{build_number}/api/json"
-    
+
     async with httpx.AsyncClient() as client:
         # Get build info to verify it exists
         res = await client.get(url, auth=AUTH)
         if res.status_code != 200:
             raise RuntimeError(f"Failed to get build info: {res.status_code}")
-        
+
         build_info = res.json()
         actual_build_number = build_info["number"]
-        
+
         # Try to get JaCoCo coverage data
         coverage_url = f"{JENKINS_URL}/job/{job_name}/{actual_build_number}/jacoco/api/json?depth=2"
-        
+
         coverage_res = await client.get(coverage_url, auth=AUTH)
-        
+
         if coverage_res.status_code == 404:
             return {
                 "job_name": job_name,
@@ -330,12 +344,13 @@ async def get_coverage_report(job_name: str, build_number: int = None):
                 "coverage_available": False,
                 "message": "No coverage data available. JaCoCo plugin may not be configured for this job."
             }
-        
+
         if coverage_res.status_code != 200:
-            raise RuntimeError(f"Failed to get coverage data: {coverage_res.status_code}: {coverage_res.text}")
-        
+            raise RuntimeError(
+                f"Failed to get coverage data: {coverage_res.status_code}: {coverage_res.text}")
+
         coverage_data = coverage_res.json()
-        
+
         # Parse JaCoCo coverage format
         def extract_percentage(metric):
             """Extract percentage from JaCoCo metric format."""
@@ -346,14 +361,17 @@ async def get_coverage_report(job_name: str, build_number: int = None):
             if total == 0:
                 return 0.0
             return round((covered / total) * 100, 2)
-        
+
         # Extract metrics
         line_coverage = extract_percentage(coverage_data.get("lineCoverage"))
-        branch_coverage = extract_percentage(coverage_data.get("branchCoverage"))
-        method_coverage = extract_percentage(coverage_data.get("methodCoverage"))
+        branch_coverage = extract_percentage(
+            coverage_data.get("branchCoverage"))
+        method_coverage = extract_percentage(
+            coverage_data.get("methodCoverage"))
         class_coverage = extract_percentage(coverage_data.get("classCoverage"))
-        instruction_coverage = extract_percentage(coverage_data.get("instructionCoverage"))
-        
+        instruction_coverage = extract_percentage(
+            coverage_data.get("instructionCoverage"))
+
         return {
             "job_name": job_name,
             "build_number": actual_build_number,
@@ -372,6 +390,8 @@ async def get_coverage_report(job_name: str, build_number: int = None):
 # =========================================================
 # MCP Tool Manifest - COMPLETE DEFINITIONS WITH SCHEMAS
 # =========================================================
+
+
 async def list_tools():
     """Enumerate available Jenkins tools with complete schemas."""
     return {

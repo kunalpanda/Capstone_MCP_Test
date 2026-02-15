@@ -1,0 +1,42 @@
+# Stop VM when not using (saves ~$24/month, only pay ~$2/month for disk)
+gcloud compute instances stop jenkins-server --zone=us-central1-a
+
+# Start VM when you need it
+gcloud compute instances start jenkins-server --zone=us-central1-a
+
+# Get the new external IP after starting (IP changes when you stop/start)
+gcloud compute instances describe jenkins-server --zone=us-central1-a --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+
+
+
+# SSH into the VM
+gcloud compute ssh jenkins-server --zone=us-central1-a
+
+# Check Jenkins Docker container status
+sudo docker ps
+
+# View Jenkins logs
+sudo docker logs jenkins
+
+# Restart Jenkins container
+sudo docker restart jenkins
+
+# Stop/Start Jenkins
+sudo docker stop jenkins
+sudo docker start Jenkins
+
+
+
+Important: IP Address Changes
+When you stop and restart the VM, the external IP changes. You'll need to:
+
+Get the new IP: gcloud compute instances describe jenkins-server --zone=us-central1-a --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+Update Jenkins MCP with the new IP
+
+To keep the same IP (costs extra ~$3/month):
+bash# Reserve a static IP
+gcloud compute addresses create jenkins-static-ip --region=us-central1
+
+# Assign it to the VM
+gcloud compute instances delete-access-config jenkins-server --zone=us-central1-a
+gcloud compute instances add-access-config jenkins-server --zone=us-central1-a --addres

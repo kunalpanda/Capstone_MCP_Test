@@ -1,0 +1,1578 @@
+[
+  {
+    "insertId": "698fa19e000f3ed7386eb68b",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     169.254.169.126:36800 - \"POST /pubsub/push HTTP/1.1\" 200 OK",
+    "timestamp": "2026-02-13T22:11:42.999127Z"
+  },
+  {
+    "insertId": "698fa19e000f3ed4d658b368",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Workflow ID: c4d8b001a6a63e1f",
+    "timestamp": "2026-02-13T22:11:42.999124Z"
+  },
+  {
+    "insertId": "698fa19e000f3ed232df13ca",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Message ID: 18180164861018992",
+    "timestamp": "2026-02-13T22:11:42.999122Z"
+  },
+  {
+    "insertId": "698fa19e000f3ed0680c8e39",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Received workflow request via Pub/Sub push",
+    "timestamp": "2026-02-13T22:11:42.999120Z"
+  },
+  {
+    "insertId": "698fa19e000f3ecdf868bfb9",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:11:42.999117Z"
+  },
+  {
+    "insertId": "698fa19e000f3ecbc10e938a",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow 10828b3b034b5a67 completed successfully",
+    "timestamp": "2026-02-13T22:11:42.999115Z"
+  },
+  {
+    "insertId": "698fa19e000f3ec96a7a7ce2",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:11:42.999113Z"
+  },
+  {
+    "insertId": "698fa19e000f3ec732fc90b1",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "??  Workflow b3fb4a3131e1611c already exists - skipping duplicate",
+    "timestamp": "2026-02-13T22:11:42.999111Z"
+  },
+  {
+    "insertId": "698fa19e000f3ec43b068841",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:11:42.999108Z"
+  },
+  {
+    "insertId": "698fa19e000f3ec2488c1f33",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow ID: b3fb4a3131e1611c",
+    "timestamp": "2026-02-13T22:11:42.999106Z"
+  },
+  {
+    "insertId": "698fa19e000f3ec02f51aa99",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:11:42.999104Z"
+  },
+  {
+    "insertId": "698fa19e000f3ebd37cb1e3c",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   REPO_NAME: test_banking_app",
+    "timestamp": "2026-02-13T22:11:42.999101Z"
+  },
+  {
+    "insertId": "698fa19e000f3ebbedb80f2b",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   REPO_OWNER: kunalpanda",
+    "timestamp": "2026-02-13T22:11:42.999099Z"
+  },
+  {
+    "insertId": "698fa19e000f3eb93927ec55",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Configured orchestrator:",
+    "timestamp": "2026-02-13T22:11:42.999097Z"
+  },
+  {
+    "insertId": "698fa19e000f3eb6efec17d8",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Executing orchestrator for workflow 10828b3b034b5a67...",
+    "timestamp": "2026-02-13T22:11:42.999094Z"
+  },
+  {
+    "insertId": "698fa19e000f3eb4e48af51a",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Updated workflow 10828b3b034b5a67 to 'running'",
+    "timestamp": "2026-02-13T22:11:42.999092Z"
+  },
+  {
+    "insertId": "698fa19e000f3eb04a0f3abb",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:11:42.999088Z"
+  },
+  {
+    "insertId": "698fa19e000f3eae3aeefda1",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Commit: authenticated123",
+    "timestamp": "2026-02-13T22:11:42.999086Z"
+  },
+  {
+    "insertId": "698fa19e000f3eac57d3057d",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Branch: main",
+    "timestamp": "2026-02-13T22:11:42.999084Z"
+  },
+  {
+    "insertId": "698fa19e000f3eaacf3dbd42",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Repo: kunalpanda/test_banking_app",
+    "timestamp": "2026-02-13T22:11:42.999082Z"
+  },
+  {
+    "insertId": "698fa19e000f3e9e7220a41c",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:11:43.005226097Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Starting workflow: 10828b3b034b5a67",
+    "timestamp": "2026-02-13T22:11:42.999070Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.002197620s",
+      "protocol": "HTTP/1.1",
+      "remoteIp": "64.233.172.77",
+      "requestMethod": "POST",
+      "requestSize": "1091",
+      "requestUrl": "https://orchestrator-worker-389127668230.us-central1.run.app/pubsub/push",
+      "responseSize": "153",
+      "serverIp": "34.143.72.2",
+      "status": 200,
+      "userAgent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)"
+    },
+    "insertId": "698fa19e000f405ee1b83b58",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-13T22:11:43.006038297Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "a5c2b2ae16c3a841",
+    "timestamp": "2026-02-13T22:11:42.992650Z",
+    "trace": "projects/capstone-cicd-ai/traces/face33bc4d14a264a00bb53d328929c7",
+    "traceSampled": true
+  },
+  {
+    "insertId": "698fa078000489e0d524a4a1",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     169.254.169.126:26094 - \"POST /pubsub/push HTTP/1.1\" 200 OK",
+    "timestamp": "2026-02-13T22:06:48.297440Z"
+  },
+  {
+    "insertId": "698fa078000489deb6bb98cc",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Workflow ID: 10828b3b034b5a67",
+    "timestamp": "2026-02-13T22:06:48.297438Z"
+  },
+  {
+    "insertId": "698fa078000489db2f066a87",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Message ID: 18346692094439787",
+    "timestamp": "2026-02-13T22:06:48.297435Z"
+  },
+  {
+    "insertId": "698fa078000489da374d8ef1",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Received workflow request via Pub/Sub push",
+    "timestamp": "2026-02-13T22:06:48.297434Z"
+  },
+  {
+    "insertId": "698fa078000489d7f2b07e4c",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:06:48.297431Z"
+  },
+  {
+    "insertId": "698fa078000489d50c29a668",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+    "timestamp": "2026-02-13T22:06:48.297429Z"
+  },
+  {
+    "insertId": "698fa078000489d2c5b0bb59",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow 08b40017ea4cd4f0 failed: Client error '403 Forbidden' for url 'https://jenkins-mcp-389127668230.us-central1.run.app'",
+    "timestamp": "2026-02-13T22:06:48.297426Z"
+  },
+  {
+    "insertId": "698fa078000489d0371fe7a9",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:06:48.297424Z"
+  },
+  {
+    "insertId": "698fa078000489cd3bd7f732",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+    "timestamp": "2026-02-13T22:06:48.297421Z"
+  },
+  {
+    "insertId": "698fa078000489cb436fe8fa",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.635820388Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow failed: Client error '403 Forbidden' for url 'https://jenkins-mcp-389127668230.us-central1.run.app'",
+    "timestamp": "2026-02-13T22:06:48.297419Z"
+  },
+  {
+    "insertId": "698fa078000489c92931fab0",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Running initial Jenkins build on main branch to detect failing tests...",
+    "timestamp": "2026-02-13T22:06:48.297417Z"
+  },
+  {
+    "insertId": "698fa078000489c7013501f1",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Created workflow: b3fb4a3131e1611c",
+    "timestamp": "2026-02-13T22:06:48.297415Z"
+  },
+  {
+    "insertId": "698fa078000489c541b815f2",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "??  Using Firestore PRODUCTION",
+    "timestamp": "2026-02-13T22:06:48.297413Z"
+  },
+  {
+    "insertId": "698fa078000489c238bc136b",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:06:48.297410Z"
+  },
+  {
+    "insertId": "698fa078000489c0e2099e48",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow ID: b3fb4a3131e1611c",
+    "timestamp": "2026-02-13T22:06:48.297408Z"
+  },
+  {
+    "insertId": "698fa078000489becffe6789",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:06:48.297406Z"
+  },
+  {
+    "insertId": "698fa078000489ba4811fa98",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   REPO_NAME: test_banking_app",
+    "timestamp": "2026-02-13T22:06:48.297402Z"
+  },
+  {
+    "insertId": "698fa078000489b8de565460",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   REPO_OWNER: kunalpanda",
+    "timestamp": "2026-02-13T22:06:48.297400Z"
+  },
+  {
+    "insertId": "698fa078000489b690c75f00",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Configured orchestrator:",
+    "timestamp": "2026-02-13T22:06:48.297398Z"
+  },
+  {
+    "insertId": "698fa078000489b4c7465067",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Event Emitter initialized (topic: workflow-events)",
+    "timestamp": "2026-02-13T22:06:48.297396Z"
+  },
+  {
+    "insertId": "698fa078000489b271696321",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "??  .env not found at expected path: /app/orchestrator/../.env",
+    "timestamp": "2026-02-13T22:06:48.297394Z"
+  },
+  {
+    "insertId": "698fa078000489af6f857401",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Executing orchestrator for workflow 08b40017ea4cd4f0...",
+    "timestamp": "2026-02-13T22:06:48.297391Z"
+  },
+  {
+    "insertId": "698fa078000489acc8945b22",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Updated workflow 08b40017ea4cd4f0 to 'running'",
+    "timestamp": "2026-02-13T22:06:48.297388Z"
+  },
+  {
+    "insertId": "698fa078000489a739dd9f0a",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:06:48.297383Z"
+  },
+  {
+    "insertId": "698fa078000489a57944a11d",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Commit: finaltest999",
+    "timestamp": "2026-02-13T22:06:48.297381Z"
+  },
+  {
+    "insertId": "698fa078000489a3c0adf496",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Branch: main",
+    "timestamp": "2026-02-13T22:06:48.297379Z"
+  },
+  {
+    "insertId": "698fa078000489a05f6e3614",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Repo: kunalpanda/test_banking_app",
+    "timestamp": "2026-02-13T22:06:48.297376Z"
+  },
+  {
+    "insertId": "698fa078000489957ba9ba16",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:06:48.303388104Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Starting workflow: 08b40017ea4cd4f0",
+    "timestamp": "2026-02-13T22:06:48.297365Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.002918890s",
+      "protocol": "HTTP/1.1",
+      "remoteIp": "192.178.15.65",
+      "requestMethod": "POST",
+      "requestSize": "1111",
+      "requestUrl": "https://orchestrator-worker-389127668230.us-central1.run.app/pubsub/push",
+      "responseSize": "153",
+      "serverIp": "34.143.77.2",
+      "status": 200,
+      "userAgent": "APIs-Google; (+https://developers.google.com/webmasters/APIs-Google.html)"
+    },
+    "insertId": "698fa07800048b8fd3d1742a",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-13T22:06:48.302000916Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "af74186286a9bd3e",
+    "timestamp": "2026-02-13T22:06:48.290731Z",
+    "trace": "projects/capstone-cicd-ai/traces/b158413041d0e4ca892605e2ec1d5c0d",
+    "traceSampled": true
+  },
+  {
+    "insertId": "698fa003000b882f21540f11",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:04:51.755759Z"
+  },
+  {
+    "insertId": "698fa003000b882c15a737f5",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow cdb5d243f75d26c2 failed: 'Settings' object has no attribute 'PROJECT_ID'",
+    "timestamp": "2026-02-13T22:04:51.755756Z"
+  },
+  {
+    "insertId": "698fa003000b88281e399fb4",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:04:51.755752Z"
+  },
+  {
+    "insertId": "698fa003000b8823b0603af9",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:04:51.755747Z"
+  },
+  {
+    "insertId": "698fa003000b882082d20ca0",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Workflow ID: b3fb4a3131e1611c",
+    "timestamp": "2026-02-13T22:04:51.755744Z"
+  },
+  {
+    "insertId": "698fa003000b881da4541f1a",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:04:51.755741Z"
+  },
+  {
+    "insertId": "698fa003000b88182c261d3b",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   REPO_NAME: test_banking_app",
+    "timestamp": "2026-02-13T22:04:51.755736Z"
+  },
+  {
+    "insertId": "698fa003000b881476deb921",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   REPO_OWNER: kunalpanda",
+    "timestamp": "2026-02-13T22:04:51.755732Z"
+  },
+  {
+    "insertId": "698fa003000b88109cf0636b",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Configured orchestrator:",
+    "timestamp": "2026-02-13T22:04:51.755728Z"
+  },
+  {
+    "insertId": "698fa003000b880d2ae899d5",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Event Emitter initialized (topic: workflow-events)",
+    "timestamp": "2026-02-13T22:04:51.755725Z"
+  },
+  {
+    "insertId": "698fa003000b88091915909f",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "?? .env not found at expected path: /app/orchestrator/../.env",
+    "timestamp": "2026-02-13T22:04:51.755721Z"
+  },
+  {
+    "insertId": "698fa003000b8804d03dac44",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Executing orchestrator for workflow cdb5d243f75d26c2...",
+    "timestamp": "2026-02-13T22:04:51.755716Z"
+  },
+  {
+    "insertId": "698fa003000b8800e5533ea3",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Updated workflow cdb5d243f75d26c2 to 'running'",
+    "timestamp": "2026-02-13T22:04:51.755712Z"
+  },
+  {
+    "insertId": "698fa003000b87fb01860a79",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "============================================================",
+    "timestamp": "2026-02-13T22:04:51.755707Z"
+  },
+  {
+    "insertId": "698fa003000b87f80df293fb",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Commit: fixedtest456",
+    "timestamp": "2026-02-13T22:04:51.755704Z"
+  },
+  {
+    "insertId": "698fa003000b87f51f9f757a",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Branch: main",
+    "timestamp": "2026-02-13T22:04:51.755701Z"
+  },
+  {
+    "insertId": "698fa003000b87f1c824427d",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "   Repo: kunalpanda/test_banking_app",
+    "timestamp": "2026-02-13T22:04:51.755697Z"
+  },
+  {
+    "insertId": "698fa003000b87dfc006bc4d",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-13T22:04:51.760252272Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "? Starting workflow: cdb5d243f75d26c2",
+    "timestamp": "2026-02-13T22:04:51.755679Z"
+  },
+  {
+    "insertId": "698fa003000b82493f03709e",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:51.991821918Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Finished server process [1]",
+    "timestamp": "2026-02-13T22:04:51.754249Z"
+  },
+  {
+    "insertId": "698fa003000b81d23fae1c8b",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:51.991821918Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Application shutdown complete.",
+    "timestamp": "2026-02-13T22:04:51.754130Z"
+  },
+  {
+    "insertId": "698fa003000b80c08f778256",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:51.991821918Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Waiting for application shutdown.",
+    "timestamp": "2026-02-13T22:04:51.753856Z"
+  },
+  {
+    "insertId": "698fa0030009f45b60844b6f",
+    "labels": {
+      "instanceId": "005eb6974cc0fd0288975f8ee4d8e2b5ae85d8e9d80373d02717e5e7b1b5846e03cc5d7ba472de37712a7a8fa785707433310f3e1873640faae087b9684b1267dfac63a8679b31d5b6e0325c3a5ebb"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:51.657461359Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00003-mf8",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Shutting down",
+    "timestamp": "2026-02-13T22:04:51.652379Z"
+  },
+  {
+    "insertId": "698f9ffe000566f41a5dfd0f",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:46.691542859Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403",
+    "timestamp": "2026-02-13T22:04:46.354036Z"
+  },
+  {
+    "errorGroups": [
+      {
+        "id": "CNCOuo6Es7juZg"
+      }
+    ],
+    "insertId": "698f9ffe000566f00dfaa6b1",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:46.363230535Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "ERROR",
+    "textPayload": "Traceback (most recent call last):\n  File \"/app/orchestrator_worker/app.py\", line 73, in run_orchestrator_workflow\n    result = await run_full_test_repair_and_generation_workflow()\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/orchestrator/orchestrator.py\", line 465, in run_full_test_repair_and_generation_workflow\n    trigger_resp = await call_mcp_tool(\n                   ^^^^^^^^^^^^^^^^^^^^\n  File \"/app/orchestrator/mcp_client.py\", line 22, in call_mcp_tool\n    response.raise_for_status()\n  File \"/usr/local/lib/python3.12/site-packages/httpx/_models.py\", line 761, in raise_for_status\n    raise HTTPStatusError(message, request=request, response=self)\nhttpx.HTTPStatusError: Client error '403 Forbidden' for url 'https://jenkins-mcp-389127668230.us-central1.run.app'",
+    "timestamp": "2026-02-13T22:04:46.354032Z"
+  },
+  {
+    "insertId": "698f9ffe000566cf71db94bf",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:46.363230535Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "future: <Task finished name='Task-4' coro=<run_orchestrator_workflow() done, defined at /app/orchestrator_worker/app.py:29> exception=HTTPStatusError(\"Client error '403 Forbidden' for url 'https://jenkins-mcp-389127668230.us-central1.run.app'\\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403\")>",
+    "timestamp": "2026-02-13T22:04:46.353999Z"
+  },
+  {
+    "insertId": "698f9ffe000566ac101e9c13",
+    "labels": {
+      "instanceId": "005eb6974cd7cd504de0da8035fb48ea533246447e4a7aaaf9c299c13bbedfcb17048f56e9574fb7d8685a5e8b290f585c521937d26ba2f12a019f23e0103eda1c39a561cfaca04d9ab4af2480a4"
+    },
+    "logName": "projects/capstone-cicd-ai/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-13T22:04:46.363230535Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "orchestrator-worker",
+        "location": "us-central1",
+        "project_id": "capstone-cicd-ai",
+        "revision_name": "orchestrator-worker-00004-sq7",
+        "service_name": "orchestrator-worker"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "Task exception was never retrieved",
+    "timestamp": "2026-02-13T22:04:46.353964Z"
+  }
+]
