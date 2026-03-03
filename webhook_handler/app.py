@@ -55,9 +55,11 @@ async def github_webhook(request: Request):
 
     Flow:
     1. Parse webhook payload
-    2. Generate workflow ID
-    3. Publish to Pub/Sub
-    4. Return 202 Accepted immediately
+    2. **Filter non-main branches** ← NEW
+    3. **Detect [skip ci] tags** ← NEW
+    4. Generate workflow ID
+    5. Publish to Pub/Sub
+    6. Return 202 Accepted immediately
 
     The orchestrator will handle:
     - Duplicate checking
@@ -65,7 +67,7 @@ async def github_webhook(request: Request):
     - Actual workflow execution
 
     Returns:
-        202 Accepted with workflow ID
+        202 Accepted with workflow ID, or 200 Ignored if filtered
     """
     try:
         # Parse webhook payload
@@ -90,6 +92,59 @@ async def github_webhook(request: Request):
         print(f"   Branch: {branch}")
         print(f"   Commit: {commit_sha[:8]}...")
 
+        # ============================================
+        # FILTER 1: Only 'main' branch triggers
+        # ============================================
+        if branch != 'main':
+            print(
+                f"⏭️  Ignoring push to branch '{branch}' (only 'main' triggers workflows)")
+            return {
+                "status": "ignored",
+                "reason": f"Only pushes to 'main' branch trigger workflows. Received: {branch}",
+                "branch": branch
+            }
+
+        # ============================================
+        # FILTER 2: Skip CI detection
+        # ============================================
+        head_commit = payload.get('head_commit', {})
+        if head_commit:
+            commit_message = head_commit.get('message', '').lower()
+            committer_name = head_commit.get(
+                'committer', {}).get('name', '').lower()
+
+            # Check for skip patterns
+            skip_patterns = [
+                '[skip ci]',
+                '[ci skip]',
+                '[skip-ci]',
+                'fix-tests-',  # Our automated branch names in commit message
+            ]
+
+            if any(pattern in commit_message for pattern in skip_patterns):
+                print(f"⏭️  Skip CI flag detected in commit message")
+                return {
+                    "status": "ignored",
+                    "reason": "Commit contains [skip ci] flag",
+                    "commit_message": head_commit.get('message', '')[:100]
+                }
+
+            # Check if it's a GitHub merge commit of our automated PR
+            is_github_merge = 'github' in committer_name or 'web-flow' in committer_name
+            is_automated_merge = 'automated' in commit_message or 'fix-tests-' in commit_message
+
+            if is_github_merge and is_automated_merge:
+                print(f"⏭️  Automated PR merge detected - skipping to prevent loop")
+                return {
+                    "status": "ignored",
+                    "reason": "Merge of automated PR detected",
+                    "committer": committer_name
+                }
+
+        # ============================================
+        # ALL FILTERS PASSED - QUEUE WORKFLOW
+        # ============================================
+
         # Generate workflow ID
         workflow_id = generate_workflow_id(repo, branch, commit_sha)
         print(f"   Workflow ID: {workflow_id}")
@@ -110,7 +165,7 @@ async def github_webhook(request: Request):
         message_id = future.result()  # Wait for publish confirmation
 
         print(f"📤 Published to Pub/Sub: {message_id}")
-        print(f"✅ Webhook processed in <1s\n")
+        print(f"✅ Workflow queued successfully\n")
 
         # Return immediately (no blocking!)
         return {
@@ -126,6 +181,76 @@ async def github_webhook(request: Request):
         print(f"❌ Webhook processing error: {e}")
         raise HTTPException(
             status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@app.post("/emergency-stop")
+async def emergency_stop(request: Request):
+    """
+    Emergency stop - stops ALL running workflows.
+
+    Sets status='stopped' for every workflow with status='running'.
+    """
+    try:
+        from google.cloud import firestore
+
+        data = await request.json()
+        db = firestore.Client(project=PROJECT_ID)
+
+        print(f"\n🛑 EMERGENCY STOP - Stopping ALL running workflows")
+
+        # Get ALL running workflows (no limit)
+        try:
+            running_workflows = db.collection('workflows')\
+                .where('status', '==', 'running')\
+                .stream()
+
+            stopped_count = 0
+            stopped_ids = []
+
+            # Stop each one
+            for workflow_doc in running_workflows:
+                workflow_id = workflow_doc.id
+
+                # Set status to stopped
+                db.collection('workflows').document(workflow_id).set({
+                    'status': 'stopped',
+                    'stoppedAt': firestore.SERVER_TIMESTAMP,
+                    'stopReason': data.get('reason', 'Emergency stop - all workflows halted')
+                }, merge=True)
+
+                stopped_count += 1
+                stopped_ids.append(workflow_id)
+                print(f"  ✅ Stopped: {workflow_id}")
+
+            if stopped_count == 0:
+                print(f"  ⚠️  No running workflows found")
+                return {
+                    "status": "success",
+                    "message": "No running workflows to stop",
+                    "stopped_count": 0
+                }
+
+            print(f"\n✅ Stopped {stopped_count} workflow(s)\n")
+
+            return {
+                "status": "stopped",
+                "stopped_count": stopped_count,
+                "workflow_ids": stopped_ids,
+                "message": f"Emergency stop flag set for {stopped_count} workflow(s). They will halt at next iteration."
+            }
+
+        except Exception as query_error:
+            print(f"❌ Error querying workflows: {query_error}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to query workflows: {query_error}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Emergency stop error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")

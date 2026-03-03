@@ -257,6 +257,8 @@ async def create_or_update_file(
     Create or update a file in the repository.
     If the file exists, it will be updated; otherwise, it will be created.
     """
+    if not message.startswith('[skip ci]'):
+        message = f"[skip ci] {message}"
     kwargs = enforce_branch(locals())
     # First, try to get the existing file to get its SHA
     file_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}"
@@ -315,6 +317,12 @@ async def create_pull_request(
     """
     Create a pull request from head branch to base branch.
     """
+    if not title.startswith('[Automated]'):
+        title = f"[Automated] {title}"
+
+    # Add skip ci note and automation footer to body
+    body = f"""[skip ci] {body}"""
+
     kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls"
     payload = {

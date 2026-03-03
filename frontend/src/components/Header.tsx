@@ -9,53 +9,130 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ state, isConnected, onViewPR }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
-  
+  const [stopping, setStopping] = useState(false);
+
   useEffect(() => {
     if (state.status !== 'running') return;
-    
+
     const interval = setInterval(() => {
       setElapsedTime(prev => prev + 1);
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, [state.status]);
-  
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
-  
-  const progressPercent = state.maxIterations > 0 
-    ? (state.currentIteration / state.maxIterations) * 100 
+
+  const handleEmergencyStop = async () => {
+    // Get workflow ID from state or URL
+    const workflowId = 'ALL';
+    
+    if (!confirm(
+      '🛑 EMERGENCY STOP\n\n' +
+      'Are you sure you want to stop the current workflow?\n\n' +
+      'This will:\n' +
+      '• Halt the workflow at the next iteration\n' +
+      '• Mark it as stopped in the system\n' +
+      '• Cannot be undone\n\n' +
+      'Continue?'
+    )) {
+      return;
+    }
+
+    setStopping(true);
+
+    try {
+      const response = await fetch(
+        'https://webhook-handler-389127668230.us-central1.run.app/emergency-stop',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workflowId: workflowId,
+            reason: 'User triggered emergency stop from dashboard'
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.status === 'stopped') {
+        alert('✅ Emergency stop initiated!\n\nThe workflow will halt at the next iteration.');
+      } else {
+        alert('⚠️ Stop command sent but status unclear.\n\nCheck logs for details.');
+      }
+    } catch (error) {
+      alert('❌ Failed to send stop command:\n\n' + error);
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  const progressPercent = state.maxIterations > 0
+    ? (state.currentIteration / state.maxIterations) * 100
     : 0;
-  
+
   return (
     <header className="header">
       <div className="header-content">
         <div className="header-title">
-          🤖 Agentic AI Core - DevOps Automation Dashboard
+          🚀 Agentic AI Core - DevOps Automation Dashboard
         </div>
+
         <div className="header-stats">
           <div className="stat-item">
             <div className={`status-indicator ${isConnected ? '' : 'error'}`}></div>
             <span>{state.status.toUpperCase()}</span>
           </div>
+
           <div className="stat-item">
             <span>Iteration: <strong>{state.currentIteration}/{state.maxIterations}</strong></span>
             <div className="progress-bar">
               <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
             </div>
           </div>
+
           <div className="stat-item">
             <span>⏱️ <strong>{formatTime(elapsedTime)}</strong></span>
           </div>
+
+          {/* Emergency Stop Button - Only show when running */}
+          {state.status === 'running' && (
+            <button
+              className="emergency-stop-button"
+              onClick={handleEmergencyStop}
+              disabled={stopping}
+              style={{
+                backgroundColor: stopping ? '#991b1b' : '#dc2626',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: 'none',
+                cursor: stopping ? 'not-allowed' : 'pointer',
+                fontWeight: '600',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: stopping ? 0.6 : 1,
+                transition: 'all 0.2s'
+              }}
+            >
+              🛑 {stopping ? 'Stopping...' : 'Emergency Stop'}
+            </button>
+          )}
+
+          {/* View PR Button - Only show when complete with PR */}
           {state.status === 'complete' && state.prSummary && (
-            <button 
+            <button
               className="view-pr-button"
               onClick={onViewPR}
             >
-              📋 View PR Summary
+              🔀 View PR Summary
             </button>
           )}
         </div>
