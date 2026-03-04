@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Circle
+  Circle,
+  StopCircle
 } from 'lucide-react';
 import { OrchestratorState } from '../../services/types';
 import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
@@ -32,6 +33,46 @@ export const Header: React.FC<HeaderProps> = ({
   onThemeToggle
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [stopping, setStopping] = useState(false);
+
+  const handleEmergencyStop = async () => {
+  if (!window.confirm(
+    '🛑 EMERGENCY STOP\n\n' +
+    'Are you sure you want to stop the current workflow?\n\n' +
+    'This will:\n' +
+    '• Halt the workflow at the next iteration\n' +
+    '• Mark it as stopped in the system\n' +
+    '• Cannot be undone\n\n' +
+    'Continue?'
+  )) {
+    return;
+  }
+
+  setStopping(true);
+  try {
+    const response = await fetch(
+      'https://webhook-handler-389127668230.us-central1.run.app/emergency-stop',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflowId: 'ALL',
+          reason: 'User triggered emergency stop from dashboard'
+        })
+      }
+    );
+    const data = await response.json();
+    if (data.status === 'stopped') {
+      alert('✅ Emergency stop initiated!\n\nThe workflow will halt at the next iteration.');
+    } else {
+      alert('⚠️ Stop command sent but status unclear.\n\nCheck logs for details.');
+    }
+  } catch (error) {
+    alert('❌ Failed to send stop command:\n\n' + error);
+  } finally {
+    setStopping(false);
+  }
+};
 
   // Timer for running workflows
   useEffect(() => {
@@ -173,6 +214,19 @@ export const Header: React.FC<HeaderProps> = ({
               <Clock size={14} />
               <span className="header__timer-value">{formatTime(elapsedTime)}</span>
             </div>
+          )}
+
+          {/* Emergency Stop — only visible while workflow is running */}
+          {state.status === 'running' && (
+            <button
+              className={`header__emergency-stop ${stopping ? 'header__emergency-stop--stopping' : ''}`}
+              onClick={handleEmergencyStop}
+              disabled={stopping}
+              title="Emergency stop — halts workflow at next iteration"
+            >
+              <StopCircle size={14} />
+              <span>{stopping ? 'Stopping...' : 'Emergency Stop'}</span>
+            </button>
           )}
 
           {/* Theme Toggle */}

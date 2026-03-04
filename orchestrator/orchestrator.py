@@ -659,6 +659,48 @@ async def run_conversation_with_tools(
 
     while iteration < max_iterations:
         iteration += 1
+
+        print(
+            f"🔍 DEBUG: Starting iteration {iteration}, checking stop flag for workflow {workflow_id}")
+
+        # ============================================
+        # EMERGENCY STOP CHECK
+        # ============================================
+        if firestore_client and workflow_id:
+            try:
+                # Use the FirestoreClient wrapper methods
+                workflow_data = await firestore_client.get_workflow(workflow_id)
+
+                if workflow_data and workflow_data.get('status') == 'stopped':
+                    print(
+                        f"\n🛑 EMERGENCY STOP detected for workflow {workflow_id}")
+                    print(
+                        f"   Stop reason: {workflow_data.get('stopReason', 'Unknown')}")
+                    print(f"   Iteration: {iteration}/{max_iterations}")
+                    print(f"✅ Workflow halted gracefully\n")
+
+                    # Update final state
+                    await emitter.emit_workflow_complete(
+                        total_iterations=iteration,
+                        success=False,
+                        reason="emergency_stop"
+                    )
+
+                    # Set final status
+                    await firestore_client.update_workflow(workflow_id, {
+                        'status': 'stopped',
+                        'iteration': iteration
+                    })
+
+                    return {
+                        'status': 'stopped',
+                        'reason': 'Emergency stop triggered',
+                        'iteration': iteration
+                    }
+            except Exception as e:
+                print(f"⚠️  Error checking emergency stop flag: {e}")
+                # Continue anyway - don't fail workflow just because of stop check
+
         print(f"\n{'='*60}")
         print(f"ITERATION {iteration}")
         print(f"{'='*60}")
