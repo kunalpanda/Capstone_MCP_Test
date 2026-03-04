@@ -14,3 +14,4 @@ frontend/yarn-error.log
 frontend/npm-debug.log*
 frontend/pnpm-debug.log*
 frontend/.eslintcache
+temp_orchestrator.txt
