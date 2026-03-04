@@ -1,0 +1,29 @@
+Frontend
+cd frontend
+npm run build
+gcloud builds submit --tag gcr.io/capstone-cicd-ai/frontend .
+gcloud run deploy frontend --image gcr.io/capstone-cicd-ai/frontend --region us-central1 --allow-unauthenticated
+cd ..
+
+Webhook Handler
+cd webhook_handler
+gcloud builds submit --tag gcr.io/capstone-cicd-ai/webhook-handler .
+gcloud run deploy webhook-handler --image gcr.io/capstone-cicd-ai/webhook-handler --region us-central1 --allow-unauthenticated
+cd ..
+
+Orchestrator
+cd orchestrator
+gcloud builds submit --tag gcr.io/capstone-cicd-ai/orchestrator .
+gcloud run deploy orchestrator --image gcr.io/capstone-cicd-ai/orchestrator --region us-central1 --allow-unauthenticated
+cd ..
+
+Orchestrator Worker
+cd orchestrator_worker_deploy
+gcloud builds submit --config=cloudbuild.yaml ..
+gcloud run deploy orchestrator-worker --image gcr.io/capstone-cicd-ai/orchestrator-worker --region us-central1 --set-env-vars PROJECT_ID=capstone-cicd-ai,JENKINS_MCP_URL=https://jenkins-mcp-389127668230.us-central1.run.app,GITHUB_MCP_URL=https://github-mcp-389127668230.us-central1.run.app,PUBSUB_SUBSCRIPTION=workflow-commands-sub
+cd ..
+
+cd backend
+gcloud builds submit --tag gcr.io/capstone-cicd-ai/backend-websocket .
+gcloud run deploy backend-websocket --image gcr.io/capstone-cicd-ai/backend-websocket --region us-central1 --allow-unauthenticated --port 8000 --set-env-vars PROJECT_ID=capstone-cicd-ai,PUBSUB_TOPIC_EVENTS=workflow-events,PUBSUB_SUBSCRIPTION_EVENTS=workflow-events-sub
+cd ..
