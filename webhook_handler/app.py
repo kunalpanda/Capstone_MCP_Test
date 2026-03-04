@@ -6,6 +6,7 @@ publishes to Pub/Sub, and returns immediately (no blocking).
 Does NOT touch Firestore - that's the orchestrator's job.
 """
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import pubsub_v1
 import json
 import hashlib
@@ -13,6 +14,13 @@ import os
 from datetime import datetime
 
 app = FastAPI(title="Webhook Handler")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://frontend-389127668230.us-central1.run.app"],
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 # Configuration from environment variables
 PROJECT_ID = os.getenv('PROJECT_ID', 'capstone-cicd-ai')

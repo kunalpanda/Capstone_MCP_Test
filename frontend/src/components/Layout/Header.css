@@ -278,3 +278,36 @@
     display: none;
   }
 }
+
+/* ─── Emergency Stop Button ──────────────────────────────────── */
+.header__emergency-stop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.header__emergency-stop:hover:not(:disabled) {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+}
+
+.header__emergency-stop:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.header__emergency-stop--stopping,
+.header__emergency-stop:disabled {
+  background-color: #991b1b;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
