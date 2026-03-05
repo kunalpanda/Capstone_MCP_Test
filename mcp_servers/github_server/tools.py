@@ -1,10 +1,7 @@
 import os
 import httpx
 import base64
-from config import GITHUB_TOKEN, GITHUB_API_URL
-
-# Shared HTTP headers
-HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"}
+from config import GITHUB_API_URL
 
 # === Branch enforcement helper (add below imports) ===
 
@@ -30,10 +27,11 @@ def enforce_branch(kwargs: dict) -> dict:
 # =========================================================
 # 1️⃣  list_user_repos  →  List all repos for a user/org
 # =========================================================
-async def list_user_repos(user: str):
+async def list_user_repos(user: str, github_token: str = None):
+    headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/users/{user}/repos?per_page=100"
     async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=HEADERS)
+        res = await client.get(url, headers=headers)
         if res.status_code != 200:
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
@@ -54,10 +52,11 @@ async def list_user_repos(user: str):
 # =========================================================
 # 2️⃣  get_repo_info  →  Retrieve metadata for a repo
 # =========================================================
-async def get_repo_info(owner: str, repo: str):
+async def get_repo_info(owner: str, repo: str, github_token: str = None):
+    headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}"
     async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=HEADERS)
+        res = await client.get(url, headers=headers)
         if res.status_code != 200:
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
@@ -79,10 +78,11 @@ async def get_repo_info(owner: str, repo: str):
 # =========================================================
 # 3️⃣  get_pr_details  →  Title, author, status, etc.
 # =========================================================
-async def get_pr_details(owner: str, repo: str, pr_number: int):
+async def get_pr_details(owner: str, repo: str, pr_number: int, github_token: str = None):
+    headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}"
     async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=HEADERS)
+        res = await client.get(url, headers=headers)
         if res.status_code != 200:
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
@@ -107,9 +107,10 @@ async def get_pr_details(owner: str, repo: str, pr_number: int):
 # =========================================================
 
 
-async def get_pr_diff(owner: str, repo: str, pr_number: int):
+async def get_pr_diff(owner: str, repo: str, pr_number: int, github_token: str = None):
+    headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}"
-    headers = HEADERS | {"Accept": "application/vnd.github.v3.diff"}
+    headers = headers | {"Accept": "application/vnd.github.v3.diff"}
     async with httpx.AsyncClient() as client:
         res = await client.get(url, headers=headers)
         if res.status_code != 200:
@@ -123,11 +124,12 @@ async def get_pr_diff(owner: str, repo: str, pr_number: int):
 # =========================================================
 # 5️⃣  get_file_tree  →  Recursively list files in a branch
 # =========================================================
-async def get_file_tree(owner: str, repo: str, ref: str = "main"):
+async def get_file_tree(owner: str, repo: str, ref: str = "main", github_token: str = None):
+    headers = {"Authorization": f"token {github_token}"}
     kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/trees/{ref}?recursive=1"
     async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=HEADERS)
+        res = await client.get(url, headers=headers)
         if res.status_code != 200:
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
@@ -142,10 +144,11 @@ async def get_file_tree(owner: str, repo: str, ref: str = "main"):
 # =========================================================
 # 6️⃣  get_commit_diff  →  Compare two commits or branches
 # =========================================================
-async def get_commit_diff(owner: str, repo: str, base: str, head: str):
+async def get_commit_diff(owner: str, repo: str, base: str, head: str, github_token: str = None):
+    headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/compare/{base}...{head}"
     async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=HEADERS)
+        res = await client.get(url, headers=headers)
         if res.status_code != 200:
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
@@ -168,14 +171,15 @@ async def get_commit_diff(owner: str, repo: str, base: str, head: str):
 # =========================================================
 
 
-async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
+async def get_file_content(owner: str, repo: str, path: str, ref: str = "main", github_token: str = None):
     """
     Returns the decoded source code for a given file path and branch/ref.
     """
+    headers = {"Authorization": f"token {github_token}"}
     kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}?ref={ref}"
     async with httpx.AsyncClient() as client:
-        res = await client.get(url, headers=HEADERS)
+        res = await client.get(url, headers=headers)
         if res.status_code != 200:
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
@@ -206,15 +210,16 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main"):
 # =========================================================
 
 
-async def create_branch(owner: str, repo: str, branch_name: str, from_branch: str = "main"):
+async def create_branch(owner: str, repo: str, branch_name: str, from_branch: str = "main", github_token: str = None):
     """
     Create a new branch from an existing branch.
     """
+    headers = {"Authorization": f"token {github_token}"}
     kwargs = enforce_branch(locals())
     # First, get the SHA of the source branch
     ref_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/ref/heads/{from_branch}"
     async with httpx.AsyncClient() as client:
-        ref_res = await client.get(ref_url, headers=HEADERS)
+        ref_res = await client.get(ref_url, headers=headers)
         if ref_res.status_code != 200:
             raise RuntimeError(
                 f"Failed to get source branch: {ref_res.status_code}: {ref_res.text}")
@@ -228,7 +233,7 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
             "sha": source_sha
         }
 
-        create_res = await client.post(create_url, headers=HEADERS, json=payload)
+        create_res = await client.post(create_url, headers=headers, json=payload)
         if create_res.status_code not in (200, 201):
             raise RuntimeError(
                 f"Failed to create branch: {create_res.status_code}: {create_res.text}")
@@ -245,18 +250,12 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
 # =========================================================
 # 9️⃣  create_or_update_file  →  Create or update a file
 # =========================================================
-async def create_or_update_file(
-    owner: str,
-    repo: str,
-    path: str,
-    content: str,
-    message: str,
-    branch: str = "main"
-):
+async def create_or_update_file(owner: str, repo: str, path: str, content: str, message: str, branch: str = "main", github_token: str = None):
     """
     Create or update a file in the repository.
     If the file exists, it will be updated; otherwise, it will be created.
     """
+    headers = {"Authorization": f"token {github_token}"}
     if not message.startswith('[skip ci]'):
         message = f"[skip ci] {message}"
     kwargs = enforce_branch(locals())
@@ -265,7 +264,7 @@ async def create_or_update_file(
     params = {"ref": branch}
 
     async with httpx.AsyncClient() as client:
-        get_res = await client.get(file_url, headers=HEADERS, params=params)
+        get_res = await client.get(file_url, headers=headers, params=params)
 
         # Prepare the payload
         import base64
@@ -287,7 +286,7 @@ async def create_or_update_file(
             operation = "created"
 
         # Create or update the file
-        put_res = await client.put(file_url, headers=HEADERS, json=payload)
+        put_res = await client.put(file_url, headers=headers, json=payload)
         if put_res.status_code not in (200, 201):
             raise RuntimeError(
                 f"Failed to {operation} file: {put_res.status_code}: {put_res.text}")
@@ -306,17 +305,11 @@ async def create_or_update_file(
 # =========================================================
 # 🔟  create_pull_request  →  Create a pull request
 # =========================================================
-async def create_pull_request(
-    owner: str,
-    repo: str,
-    title: str,
-    body: str,
-    head: str,
-    base: str = "main"
-):
+async def create_pull_request(owner: str, repo: str, title: str, body: str, head: str, base: str = "main", github_token: str = None):
     """
     Create a pull request from head branch to base branch.
     """
+    headers = {"Authorization": f"token {github_token}"}
     if not title.startswith('[Automated]'):
         title = f"[Automated] {title}"
 
@@ -333,7 +326,7 @@ async def create_pull_request(
     }
 
     async with httpx.AsyncClient() as client:
-        res = await client.post(url, headers=HEADERS, json=payload)
+        res = await client.post(url, headers=headers, json=payload)
         if res.status_code not in (200, 201):
             raise RuntimeError(
                 f"Failed to create PR: {res.status_code}: {res.text}")

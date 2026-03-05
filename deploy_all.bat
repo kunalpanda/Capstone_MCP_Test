@@ -1,6 +1,6 @@
 @echo off
 echo Deploying all Cloud Run services...
-
+@REM These are old commands. The MCP servers used these in single-tenant workflow. The multi tenant uses the commands in GCP_UPDATE_COMMANDS
 echo.
 echo [1/5] Deploying GitHub MCP...
 cd "C:\Users\Tanish\Desktop\Tanish Singla\YEAR 4\Sem1\Capstone I\Capstone_MCP_Test\mcp_servers\github_server"

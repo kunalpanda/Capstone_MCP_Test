@@ -157,13 +157,16 @@ async def github_webhook(request: Request):
         workflow_id = generate_workflow_id(repo, branch, commit_sha)
         print(f"   Workflow ID: {workflow_id}")
 
-        # Create message for Pub/Sub
+        # Extract client_id from header, default for backward compat
+        client_id = request.headers.get('X-Client-ID', 'default')
+
         message_data = {
             'workflowId': workflow_id,
             'repo': repo,
             'branch': branch,
             'commitSha': commit_sha,
-            'payload': payload,  # Include full payload for worker
+            'clientId': client_id,
+            'payload': payload,
             'receivedAt': datetime.utcnow().isoformat()
         }
 
@@ -189,6 +192,60 @@ async def github_webhook(request: Request):
         print(f"❌ Webhook processing error: {e}")
         raise HTTPException(
             status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@app.post("/register")
+async def register_client(request: Request):
+    """Register a new client and provision their secrets in Secret Manager."""
+    import uuid
+    from google.cloud import secretmanager
+
+    try:
+        body = await request.json()
+        github_token = body.get("github_token")
+        jenkins_token = body.get("jenkins_token")
+        jenkins_url = body.get("jenkins_url")
+        jenkins_user = body.get("jenkins_user")
+
+        if not all([github_token, jenkins_token, jenkins_url, jenkins_user]):
+            raise HTTPException(
+                status_code=400, detail="Missing required fields: github_token, jenkins_token, jenkins_url, jenkins_user")
+
+        client_id = str(uuid.uuid4())[:8]
+
+        sm_client = secretmanager.SecretManagerServiceClient()
+        project_path = f"projects/{PROJECT_ID}"
+
+        secrets_to_create = {
+            f"client-{client_id}-github-token":  github_token,
+            f"client-{client_id}-jenkins-token": jenkins_token,
+            f"client-{client_id}-jenkins-url":   jenkins_url,
+            f"client-{client_id}-jenkins-user":  jenkins_user,
+        }
+
+        for secret_id, value in secrets_to_create.items():
+            sm_client.create_secret(request={
+                "parent": project_path,
+                "secret_id": secret_id,
+                "secret": {"replication": {"automatic": {}}}
+            })
+            sm_client.add_secret_version(request={
+                "parent": f"{project_path}/secrets/{secret_id}",
+                "payload": {"data": value.encode("utf-8")}
+            })
+
+        print(f"✅ Registered new client: {client_id}")
+        return {
+            "client_id": client_id,
+            "message": "Client registered. Use X-Client-ID header in webhook calls.",
+            "example": f"curl -H 'X-Client-ID: {client_id}' .../webhook/github"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Registration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/emergency-stop")

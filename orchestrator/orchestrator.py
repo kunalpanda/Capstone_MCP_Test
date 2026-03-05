@@ -231,15 +231,16 @@ async def fetch_all_tools():
 
                 if "result" in response and "tools" in response["result"]:
                     server_tools = response["result"]["tools"]
-                    all_tools.extend(server_tools)
 
-                    # Build routing map: tool_name -> server_url
+                    # Build routing map and deduplicate: first server wins
                     for tool in server_tools:
                         tool_name = tool["name"]
                         if tool_name in tool_to_server:
                             print(
                                 f"   ⚠️  Warning: Tool '{tool_name}' provided by multiple servers")
-                        tool_to_server[tool_name] = server_url
+                        else:
+                            all_tools.append(tool)
+                            tool_to_server[tool_name] = server_url
 
                     print(
                         f"   ✅ Loaded {len(server_tools)} tools from {server_name}")
@@ -351,7 +352,7 @@ async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: st
         return None
 
 
-async def fetch_baseline_coverage(job_name: str) -> dict:
+async def fetch_baseline_coverage(job_name: str, _jenkins_headers: dict = None) -> dict:
     """
     Fetch initial coverage report from Jenkins to establish baseline.
 
@@ -368,7 +369,8 @@ async def fetch_baseline_coverage(job_name: str) -> dict:
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="get_coverage_report",
-            params={"job_name": job_name}
+            params={"job_name": job_name},
+            headers=_jenkins_headers
         )
 
         if "result" in result:
@@ -405,7 +407,9 @@ async def run_full_test_repair_and_generation_workflow(
     workflow_id: str = None,
     repo: str = None,
     branch: str = None,
-    commit_sha: str = None
+    commit_sha: str = None,
+    github_headers: dict = None,
+    jenkins_headers: dict = None
 ):
     """
     Complete autonomous CI/CD cycle:
@@ -472,7 +476,8 @@ async def run_full_test_repair_and_generation_workflow(
             method="tools/call",
             name="trigger_build",
             params={"job_name": "test_banking_app",
-                    "parameters": {"BRANCH": "main"}}
+                    "parameters": {"BRANCH": "main"}},
+            headers=jenkins_headers
         )
         print(
             f"✅ Triggered main branch build: {json.dumps(trigger_resp, indent=2)}")
@@ -482,7 +487,8 @@ async def run_full_test_repair_and_generation_workflow(
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="get_build_info",
-            params={"job_name": "test_banking_app"}
+            params={"job_name": "test_banking_app"},
+            headers=jenkins_headers
         )
 
         if "result" not in build_info:
@@ -501,6 +507,7 @@ async def run_full_test_repair_and_generation_workflow(
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="wait_for_build_completion",
+            headers=jenkins_headers,
             params={
                 "job_name": "test_banking_app",
                 "build_number": build_number,
@@ -524,7 +531,8 @@ async def run_full_test_repair_and_generation_workflow(
             method="tools/call",
             name="get_test_results",
             params={"job_name": "test_banking_app",
-                    "build_number": build_number}
+                    "build_number": build_number},
+            headers=jenkins_headers
         )
         print(f"🧪 Test Results: {json.dumps(test_results, indent=2)[:800]}...")
 
@@ -578,7 +586,7 @@ async def run_full_test_repair_and_generation_workflow(
               f"Method={settings.TARGET_METHOD_COVERAGE}%")
 
         # Fetch baseline coverage from Jenkins
-        baseline_coverage = await fetch_baseline_coverage(job_name="test_banking_app")
+        baseline_coverage = await fetch_baseline_coverage(job_name="test_banking_app", _jenkins_headers=jenkins_headers)
         if baseline_coverage:
             state.update_coverage(baseline_coverage)
             print(state.get_coverage_summary())
@@ -591,9 +599,11 @@ async def run_full_test_repair_and_generation_workflow(
             prompt,
             max_iterations=50,
             tools=tools,
-            tool_to_server=tool_to_server,  # Pass routing map
-            workflow_id=workflow_id,        # Pass workflow ID
-            firestore_client=firestore_client  # Pass Firestore client
+            tool_to_server=tool_to_server,
+            workflow_id=workflow_id,
+            firestore_client=firestore_client,
+            github_headers=github_headers,
+            jenkins_headers=jenkins_headers
         )
 
     except Exception as e:
@@ -617,7 +627,9 @@ async def run_conversation_with_tools(
         tools: list = None,
         tool_to_server: dict = None,
         workflow_id: str = None,
-        firestore_client=None
+        firestore_client=None,
+        github_headers: dict = None,
+        jenkins_headers: dict = None
 ):
     """
     Run a multi-turn conversation with Claude, executing tools as requested.
@@ -635,6 +647,22 @@ async def run_conversation_with_tools(
         if not tools or not tool_to_server:
             raise RuntimeError("Failed to fetch tools from MCP servers")
 
+    # Hardcode routing to guarantee correct server regardless of discovery order
+    GITHUB_TOOLS = {
+        "list_user_repos", "get_repo_info", "get_file_tree", "get_file_content",
+        "get_commit_diff", "get_pr_details", "get_pr_diff",
+        "create_branch", "create_or_update_file", "create_pull_request"
+    }
+    JENKINS_TOOLS = {
+        "trigger_build", "get_build_info", "get_queue_info",
+        "wait_for_build_completion", "get_test_results",
+        "get_console_output", "get_coverage_report"
+    }
+    for name in GITHUB_TOOLS:
+        tool_to_server[name] = settings.GITHUB_MCP_URL
+    for name in JENKINS_TOOLS:
+        tool_to_server[name] = settings.JENKINS_MCP_URL
+
     # Initial message
     messages = [
         {
@@ -644,7 +672,12 @@ async def run_conversation_with_tools(
     ]
 
     system_prompt = (
-        "You are an autonomous agent for software test analysis and improvement. "
+        "You are an autonomous agent for software test analysis and improvement.\n\n"
+        "AVAILABLE TOOLS - use ONLY these exact names:\n"
+        "GitHub tools: list_user_repos, get_repo_info, get_file_tree, get_file_content, "
+        "get_commit_diff, get_pr_details, get_pr_diff, create_branch, create_or_update_file, create_pull_request\n"
+        "Jenkins tools: trigger_build, get_build_info, get_queue_info, "
+        "wait_for_build_completion, get_test_results, get_console_output, get_coverage_report\n\n"
         "CRITICAL STATE TRACKING:\n"
         "- Always note which branch you're working on\n"
         "- After updating files, VERIFY changes with get_file_content\n"
@@ -800,11 +833,14 @@ async def run_conversation_with_tools(
                                 f"Unknown tool '{tool_name}' - not provided by any MCP server")
 
                         # Call the MCP server
+                        # Choose headers based on which MCP server is being called
+                        _headers = github_headers if server_url == settings.GITHUB_MCP_URL else jenkins_headers
                         mcp_response = await call_mcp_tool(
                             server_url=server_url,
                             method="tools/call",
                             name=tool_name,
-                            params=enforce_branch(tool_input)
+                            params=enforce_branch(tool_input),
+                            headers=_headers
                         )
 
                         # Extract result from JSON-RPC response
