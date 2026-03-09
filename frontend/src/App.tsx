@@ -54,7 +54,7 @@ function App() {
 
   // Reset modal flag and set start time when a new workflow starts
   useEffect(() => {
-    if (state.status === 'running' && state.currentIteration === 1) {
+    if (state.status === 'running' && state.currentInteraction === 1) {
       hasShownModal.current = false;
       setWorkflowStartTime(Date.now());
     }
@@ -62,7 +62,7 @@ function App() {
     if (state.status === 'idle' || state.status === 'complete' || state.status === 'error') {
       // Keep the time for display, don't reset immediately
     }
-  }, [state.status, state.currentIteration]);
+  }, [state.status, state.currentInteraction]);
   
   const handleViewPR = () => {
     if (state.prSummary) {

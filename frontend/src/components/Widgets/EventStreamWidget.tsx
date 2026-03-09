@@ -47,7 +47,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
               <Play size={14} />
             </div>
             <div className="event-card__main">
-              <span className="event-card__title">Iteration {event.data.iteration}</span>
+              <span className="event-card__title">Interaction {event.data.iteration}</span>
               <span className="event-card__subtitle">
                 Progress: {event.data.progress_percent?.toFixed(0) || 0}%
               </span>

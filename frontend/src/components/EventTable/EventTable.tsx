@@ -38,8 +38,8 @@ interface SortConfig {
 }
 
 const EVENT_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
-  iteration_start: { label: 'Iteration Start', icon: <Play size={14} />, className: 'type--iteration' },
-  iteration_end: { label: 'Iteration End', icon: <Play size={14} />, className: 'type--iteration' },
+  iteration_start: { label: 'Interaction Start', icon: <Play size={14} />, className: 'type--iteration' },
+  iteration_end: { label: 'Interaction End', icon: <Play size={14} />, className: 'type--iteration' },
   claude_response: { label: 'Claude Response', icon: <MessageSquare size={14} />, className: 'type--claude' },
   tool_call: { label: 'Tool Call', icon: <Wrench size={14} />, className: 'type--tool' },
   tool_result: { label: 'Tool Result', icon: <CheckCircle2 size={14} />, className: 'type--result' },
@@ -76,7 +76,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events }) => {
     
     switch (event.type) {
       case 'iteration_start':
-        return `Iteration ${event.data.iteration ?? '?'} of ${event.data.max_iterations ?? '?'}`;
+        return `Interaction ${event.data.iteration ?? '?'} of ${event.data.max_iterations ?? '?'}`;
       case 'claude_response':
         return event.data.message_preview || event.data.text_content?.substring(0, 100) || 'No content';
       case 'tool_call':
@@ -87,7 +87,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events }) => {
       case 'workflow_start':
         return `${event.data.repo_owner || '?'}/${event.data.repo_name || '?'} on ${event.data.branch || '?'}`;
       case 'workflow_complete':
-        return `${event.data.success ? 'Completed successfully' : 'Failed'} - ${event.data.total_iterations ?? '?'} iterations`;
+        return `${event.data.success ? 'Completed successfully' : 'Failed'} - ${event.data.total_iterations ?? '?'} interactions`;
       case 'state_update':
         return event.data.phase || 'State updated';
       case 'error':

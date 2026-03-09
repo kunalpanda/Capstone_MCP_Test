@@ -124,7 +124,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
           logEntries.push({
             timestamp: event.timestamp,
             level: event.data.success ? 'info' : 'error',
-            message: `Workflow ${event.data.success ? 'completed successfully' : 'failed'} after ${event.data.total_iterations} iterations`,
+            message: `Workflow ${event.data.success ? 'completed successfully' : 'failed'} after ${event.data.total_iterations} interactions`,
             source: 'workflow'
           });
           break;
@@ -133,7 +133,7 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
           logEntries.push({
             timestamp: event.timestamp,
             level: 'debug',
-            message: `Iteration ${event.data.iteration} of ${event.data.max_iterations} started`,
+            message: `Interaction ${event.data.iteration} of ${event.data.max_iterations} started`,
             source: 'iteration'
           });
           break;

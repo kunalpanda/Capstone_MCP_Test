@@ -4,8 +4,8 @@ import { BaseEvent, OrchestratorState } from '../services/types';
 export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => {
   const [state, setState] = useState<OrchestratorState>({
     status: 'idle',
-    currentIteration: 0,
-    maxIterations: 50,
+    currentInteraction: 0,
+    maxInteractions: 50,
     repo: '',
     branch: '',
     recentActions: [],
@@ -28,13 +28,13 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
           newState.status = 'running';
           newState.repo = `${latestEvent.data.repo_owner}/${latestEvent.data.repo_name}`;
           newState.branch = latestEvent.data.branch;
-          newState.maxIterations = latestEvent.data.max_iterations;
+          newState.maxInteractions = latestEvent.data.max_iterations;
           newState.recentActions = [];
           newState.totalActions = 0;
           break;
 
         case 'iteration_start':
-          newState.currentIteration = latestEvent.data.iteration;
+          newState.currentInteraction = latestEvent.data.iteration;
           break;
 
         case 'state_update':
