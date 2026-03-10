@@ -1,19 +1,18 @@
 // src/components/PRSummaryModal/PRSummaryModal.tsx
 // Modal for displaying PR summary details
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   X,
   GitPullRequest,
   ExternalLink,
   GitBranch,
-  User,
   Calendar,
-  FileCode,
-  CheckCircle2,
-  Clock
+  CheckCircle2
 } from 'lucide-react';
-import { PRSummary, PRSummaryData } from '../../services/types';
+import { PRSummary } from '../../services/types';
 import './PRSummaryModal.css';
 
 interface PRSummaryModalProps {
@@ -22,12 +21,30 @@ interface PRSummaryModalProps {
   onClose: () => void;
 }
 
+const normalizeMarkdown = (text?: string): string => {
+  if (!text || !text.trim()) {
+    return 'No description provided.';
+  }
+
+  let normalized = text.trim();
+
+  // Convert escaped newlines into real newlines if needed
+  normalized = normalized.replace(/\\n/g, '\n');
+
+  // Normalize line endings
+  normalized = normalized.replace(/\r\n/g, '\n');
+
+  // Collapse excessive empty lines
+  normalized = normalized.replace(/\n{3,}/g, '\n\n');
+
+  return normalized;
+};
+
 export const PRSummaryModal: React.FC<PRSummaryModalProps> = ({
   prSummary,
   isOpen,
   onClose
 }) => {
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -46,40 +63,20 @@ export const PRSummaryModal: React.FC<PRSummaryModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  const markdownBody = useMemo(() => {
+    return normalizeMarkdown(prSummary?.body);
+  }, [prSummary?.body]);
 
-  // Simple markdown-like rendering
-  const renderMarkdown = (text: string): string => {
-    return text
-      // Headers
-      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Code blocks
-      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-      // Inline code
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // Lists
-      .replace(/^\s*[-*]\s+(.*$)/gm, '<li>$1</li>')
-      // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-      // Line breaks
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br>');
-  };
+  if (!isOpen) return null;
 
   return (
     <div className="pr-modal__overlay" onClick={onClose}>
       <div className="pr-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className="pr-modal__header">
           <div className="pr-modal__header-icon">
             <GitPullRequest size={24} />
           </div>
+
           <div className="pr-modal__header-info">
             <h2 className="pr-modal__title">{prSummary.title}</h2>
             <div className="pr-modal__meta">
@@ -90,12 +87,12 @@ export const PRSummaryModal: React.FC<PRSummaryModalProps> = ({
               </span>
             </div>
           </div>
+
           <button className="pr-modal__close" onClick={onClose} title="Close">
             <X size={20} />
           </button>
         </div>
 
-        {/* Details Bar */}
         <div className="pr-modal__details">
           {(prSummary.head_branch || prSummary.branch) && (
             <div className="pr-modal__detail">
@@ -105,6 +102,7 @@ export const PRSummaryModal: React.FC<PRSummaryModalProps> = ({
               <span>{prSummary.base_branch || 'main'}</span>
             </div>
           )}
+
           {prSummary.created_at && (
             <div className="pr-modal__detail">
               <Calendar size={14} />
@@ -113,15 +111,38 @@ export const PRSummaryModal: React.FC<PRSummaryModalProps> = ({
           )}
         </div>
 
-        {/* Body */}
         <div className="pr-modal__body">
-          <div 
-            className="pr-modal__content"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(prSummary.body || 'No description provided.') }}
-          />
+          <div className="pr-modal__content pr-readme">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({ ...props }) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer" />
+                ),
+                code({ inline, className, children, ...props }: any) {
+                  if (inline) {
+                    return (
+                      <code className="pr-readme__inline-code" {...props}>
+                        {children}
+                      </code>
+                    );
+                  }
+
+                  return (
+                    <pre className="pr-readme__codeblock">
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    </pre>
+                  );
+                }
+              }}
+            >
+              {markdownBody}
+            </ReactMarkdown>
+          </div>
         </div>
 
-        {/* Footer */}
         <div className="pr-modal__footer">
           {(prSummary.html_url || prSummary.pr_url) && (
             <a
@@ -134,6 +155,7 @@ export const PRSummaryModal: React.FC<PRSummaryModalProps> = ({
               <span>View on GitHub</span>
             </a>
           )}
+
           <button className="pr-modal__action pr-modal__action--secondary" onClick={onClose}>
             Close
           </button>
