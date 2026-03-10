@@ -1,7 +1,7 @@
 // src/components/Layout/Header.tsx
 // Professional header with status indicators, interaction budget, and controls
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Wifi,
   WifiOff,
@@ -23,39 +23,27 @@ interface HeaderProps {
   isConnected: boolean;
   theme: Theme;
   onThemeToggle: () => void;
+  workflowStartTime: number | null;
+  elapsedSeconds: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   state,
   isConnected,
   theme,
-  onThemeToggle
+  onThemeToggle,
+  workflowStartTime,
+  elapsedSeconds
 }) => {
-  const [elapsedTime, setElapsedTime] = useState(0);
-
-  // Timer for running workflows
-  useEffect(() => {
-    if (state.status !== 'running') {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [state.status]);
-
-  // Reset timer when workflow starts
-  useEffect(() => {
-    if (state.status === 'running' && state.currentInteraction === 1) {
-      setElapsedTime(0);
-    }
-  }, [state.status, state.currentInteraction]);
-
   const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
+
+    if (hrs > 0) {
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
@@ -105,6 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const statusConfig = getStatusConfig();
+  const showTimer = workflowStartTime !== null && state.status !== 'idle';
 
   return (
     <header className="header">
@@ -164,10 +153,10 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right section - Timer and Theme */}
         <div className="header__right">
           {/* Elapsed Time */}
-          {state.status === 'running' && (
+          {showTimer && (
             <div className="header__timer">
               <Clock size={14} />
-              <span className="header__timer-value">{formatTime(elapsedTime)}</span>
+              <span className="header__timer-value">{formatTime(elapsedSeconds)}</span>
             </div>
           )}
 

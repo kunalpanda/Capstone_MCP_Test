@@ -17,6 +17,8 @@ interface LayoutProps {
   activeView: ViewMode;
   onViewChange: (view: ViewMode) => void;
   onViewPR?: () => void;
+  workflowStartTime: number | null;
+  elapsedSeconds: number;
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'orchestrator-sidebar-collapsed';
@@ -29,7 +31,9 @@ export const Layout: React.FC<LayoutProps> = ({
   onThemeToggle,
   activeView,
   onViewChange,
-  onViewPR
+  onViewPR,
+  workflowStartTime,
+  elapsedSeconds
 }) => {
   // Initialize collapsed state from localStorage
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -67,6 +71,8 @@ export const Layout: React.FC<LayoutProps> = ({
           isConnected={isConnected}
           theme={theme}
           onThemeToggle={onThemeToggle}
+          workflowStartTime={workflowStartTime}
+          elapsedSeconds={elapsedSeconds}
         />
 
         {/* Content */}

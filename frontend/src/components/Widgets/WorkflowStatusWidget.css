@@ -150,6 +150,10 @@
   gap: var(--space-3);
 }
 
+.workflow-status__metric--center {
+  align-items: center;
+}
+
 .workflow-status__metric-header {
   display: flex;
   align-items: center;

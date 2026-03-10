@@ -14,12 +14,14 @@ function App() {
   const { isConnected, events } = useWebSocket();
   const state = useOrchestratorState(events);
   const { theme, toggleTheme } = useTheme();
-  
+
   const [activeView, setActiveView] = useState<ViewMode>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const hasShownModal = useRef(false);
+
   const [workflowStartTime, setWorkflowStartTime] = useState<number | null>(null);
-  
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
   // Debug: Log all events (keep for development)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -30,7 +32,7 @@ function App() {
       }
     }
   }, [events]);
-  
+
   // Debug: Log state changes (keep for development)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -43,7 +45,7 @@ function App() {
       });
     }
   }, [state.status, state.prSummary, isModalOpen]);
-  
+
   // Auto-open modal when workflow completes with PR summary
   useEffect(() => {
     if (state.status === 'complete' && state.prSummary && !hasShownModal.current) {
@@ -52,24 +54,47 @@ function App() {
     }
   }, [state.status, state.prSummary]);
 
-  // Reset modal flag and set start time when a new workflow starts
+  // Detect the start of a new workflow
   useEffect(() => {
     if (state.status === 'running' && state.currentInteraction === 1) {
       hasShownModal.current = false;
       setWorkflowStartTime(Date.now());
-    }
-    // Clear start time when workflow ends
-    if (state.status === 'idle' || state.status === 'complete' || state.status === 'error') {
-      // Keep the time for display, don't reset immediately
+      setElapsedSeconds(0);
     }
   }, [state.status, state.currentInteraction]);
-  
+
+  // Clear timer when workflow returns to idle
+  useEffect(() => {
+    if (state.status === 'idle') {
+      setWorkflowStartTime(null);
+      setElapsedSeconds(0);
+    }
+  }, [state.status]);
+
+  // Shared elapsed timer for header + widget
+  // It only ticks while running and stays frozen on complete/error
+  useEffect(() => {
+    if (!workflowStartTime || state.status !== 'running') {
+      return;
+    }
+
+    const updateElapsed = () => {
+      setElapsedSeconds(Math.floor((Date.now() - workflowStartTime) / 1000));
+    };
+
+    updateElapsed();
+
+    const interval = window.setInterval(updateElapsed, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [workflowStartTime, state.status]);
+
   const handleViewPR = () => {
     if (state.prSummary) {
       setIsModalOpen(true);
     }
   };
-  
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
   };
@@ -82,16 +107,30 @@ function App() {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <DashboardView state={state} events={events} workflowStartTime={workflowStartTime} />;
+        return (
+          <DashboardView
+            state={state}
+            events={events}
+            workflowStartTime={workflowStartTime}
+            elapsedSeconds={elapsedSeconds}
+          />
+        );
       case 'table':
         return <TableView events={events} />;
       case 'logs':
         return <LogsView events={events} />;
       default:
-        return <DashboardView state={state} events={events} workflowStartTime={workflowStartTime} />;
+        return (
+          <DashboardView
+            state={state}
+            events={events}
+            workflowStartTime={workflowStartTime}
+            elapsedSeconds={elapsedSeconds}
+          />
+        );
     }
   };
-  
+
   return (
     <>
       <Layout
@@ -102,12 +141,14 @@ function App() {
         activeView={activeView}
         onViewChange={handleViewChange}
         onViewPR={handleViewPR}
+        workflowStartTime={workflowStartTime}
+        elapsedSeconds={elapsedSeconds}
       >
         {renderView()}
       </Layout>
 
       {state.prSummary && (
-        <PRSummaryModal 
+        <PRSummaryModal
           prSummary={state.prSummary}
           isOpen={isModalOpen}
           onClose={handleCloseModal}

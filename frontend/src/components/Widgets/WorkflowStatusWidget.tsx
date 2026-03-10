@@ -1,9 +1,10 @@
 // src/components/Widgets/WorkflowStatusWidget.tsx
 // Displays workflow status, interaction gauge (depleting), and elapsed time
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Clock,
+  Activity,
   CheckCircle2,
   XCircle,
   Loader2,
@@ -15,12 +16,13 @@ import './WorkflowStatusWidget.css';
 interface WorkflowStatusWidgetProps {
   state: OrchestratorState;
   workflowStartTime: number | null;
+  elapsedSeconds: number;
 }
 
 /**
  * SVG gauge component showing remaining interactions.
  * Starts at 100% (all interactions available) and depletes as interactions are consumed.
- * Color shifts: green (>50% remaining) → amber (≤50%) → red (≤20%)
+ * Color shifts: green (>50% remaining), amber (≤50%), red (≤20%)
  */
 const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current, max }) => {
   const size = 130;
@@ -32,14 +34,12 @@ const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current,
   const remainingPercent = max > 0 ? remaining / max : 1;
   const strokeDashoffset = circumference * (1 - remainingPercent);
 
-  // Color based on remaining percentage
   const getGaugeColor = () => {
     if (remainingPercent > 0.5) return 'var(--color-success-500)';
     if (remainingPercent > 0.2) return 'var(--color-warning-500)';
     return 'var(--color-error-500)';
   };
 
-  // Background track color hint based on state
   const getTrackColor = () => {
     if (remainingPercent > 0.5) return 'var(--bg-tertiary)';
     if (remainingPercent > 0.2) return 'rgba(245, 158, 11, 0.1)';
@@ -56,7 +56,6 @@ const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current,
         viewBox={`0 0 ${size} ${size}`}
         className="interaction-gauge__svg"
       >
-        {/* Background track */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -65,7 +64,6 @@ const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current,
           stroke={getTrackColor()}
           strokeWidth={strokeWidth}
         />
-        {/* Remaining arc - depletes as interactions are used */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -80,6 +78,7 @@ const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current,
           className="interaction-gauge__fill"
         />
       </svg>
+
       <div className="interaction-gauge__label">
         <span className="interaction-gauge__value" style={{ color: gaugeColor }}>
           {remaining}
@@ -92,44 +91,20 @@ const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current,
   );
 };
 
-export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({ 
-  state, 
-  workflowStartTime 
+export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
+  state,
+  workflowStartTime,
+  elapsedSeconds
 }) => {
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  // Calculate elapsed time from start time
-  useEffect(() => {
-    if (!workflowStartTime) {
-      setElapsedSeconds(0);
-      return;
-    }
-
-    const calculateElapsed = () => {
-      return Math.floor((Date.now() - workflowStartTime) / 1000);
-    };
-
-    setElapsedSeconds(calculateElapsed());
-
-    if (state.status !== 'running') {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setElapsedSeconds(calculateElapsed());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [workflowStartTime, state.status]);
-
   const formatTime = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hrs > 0) {
       return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
+
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
@@ -179,6 +154,7 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
   };
 
   const statusConfig = getStatusConfig();
+  const showTimer = workflowStartTime !== null && state.status !== 'idle';
 
   return (
     <div className="workflow-status-widget">
@@ -197,10 +173,16 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
       <div className="workflow-status__metrics-row">
         {/* Interaction Gauge */}
         <div className="workflow-status__section">
-          <InteractionGauge
-            current={state.currentInteraction}
-            max={state.maxInteractions}
-          />
+          <div className="workflow-status__metric workflow-status__metric--center">
+            <div className="workflow-status__metric-header">
+              <Activity size={16} />
+              <span>Interaction Cap</span>
+            </div>
+            <InteractionGauge
+              current={state.currentInteraction}
+              max={state.maxInteractions}
+            />
+          </div>
         </div>
 
         {/* Timer Section */}
@@ -212,7 +194,7 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
             </div>
             <div className="workflow-status__timer">
               <span className="workflow-status__timer-value">
-                {formatTime(elapsedSeconds)}
+                {showTimer ? formatTime(elapsedSeconds) : '00:00'}
               </span>
               {state.status === 'running' && (
                 <span className="workflow-status__timer-indicator" />
