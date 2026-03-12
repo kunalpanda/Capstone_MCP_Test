@@ -1,0 +1,43 @@
+.config-setup { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: var(--bg-primary); }
+
+.config-setup__panel--left {
+  display: flex; flex-direction: column; justify-content: center; gap: var(--space-10);
+  width: 40%; min-width: 320px; padding: var(--space-12) var(--space-10);
+  background: var(--color-primary-600); color: #fff;
+}
+.config-setup__brand { display: flex; flex-direction: column; gap: var(--space-3); }
+.config-setup__logo {
+  display: flex; align-items: center; justify-content: center;
+  width: 64px; height: 64px; background: rgba(255,255,255,0.15);
+  border-radius: var(--radius-xl); backdrop-filter: blur(8px);
+}
+.config-setup__title { font-size: 1.75rem; font-weight: var(--font-bold); margin: 0; letter-spacing: -0.02em; }
+.config-setup__subtitle { font-size: var(--text-base); opacity: 0.8; margin: 0; line-height: 1.5; }
+
+.config-setup__features { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+.config-setup__feature { display: flex; align-items: flex-start; gap: var(--space-4); }
+.config-setup__feature-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; background: rgba(255,255,255,0.15);
+  border-radius: var(--radius-md); flex-shrink: 0; margin-top: 2px;
+}
+.config-setup__feature strong { display: block; font-size: var(--text-sm); font-weight: var(--font-semibold); margin-bottom: var(--space-1); }
+.config-setup__feature p { font-size: var(--text-xs); opacity: 0.75; margin: 0; line-height: 1.5; }
+
+.config-setup__panel--right {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  overflow-y: auto; padding: var(--space-8) var(--space-6); background: var(--bg-secondary);
+}
+.config-setup__form-wrap { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: var(--space-6); }
+.config-setup__form-header h2 {
+  font-size: 1.375rem; font-weight: var(--font-bold); color: var(--text-primary);
+  margin: 0 0 var(--space-2); letter-spacing: -0.01em;
+}
+.config-setup__form-header p { font-size: var(--text-sm); color: var(--text-secondary); margin: 0; line-height: 1.5; }
+
+@media (max-width: 768px) {
+  .config-setup { flex-direction: column; }
+  .config-setup__panel--left { width: 100%; min-width: unset; padding: var(--space-8) var(--space-6); gap: var(--space-6); }
+  .config-setup__features { display: none; }
+  .config-setup__panel--right { flex: 1; }
+}

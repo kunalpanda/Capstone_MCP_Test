@@ -12,7 +12,8 @@ import {
   XCircle,
   Loader2,
   Circle,
-  StopCircle
+  StopCircle,
+  Settings
 } from 'lucide-react';
 import { OrchestratorState } from '../../services/types';
 import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
@@ -24,13 +25,15 @@ interface HeaderProps {
   isConnected: boolean;
   theme: Theme;
   onThemeToggle: () => void;
+  onEditConfig: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   state,
   isConnected,
   theme,
-  onThemeToggle
+  onThemeToggle,
+  onEditConfig
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [stopping, setStopping] = useState(false);
@@ -228,6 +231,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{stopping ? 'Stopping...' : 'Emergency Stop'}</span>
             </button>
           )}
+          
+          {/* Edit Config */}
+          <button
+            className="header__edit-config"
+            onClick={onEditConfig}
+            title="Edit configuration"
+          >
+            <Settings size={14} />
+            <span>Edit Config</span>
+          </button>
 
           {/* Theme Toggle */}
           <ThemeToggle
