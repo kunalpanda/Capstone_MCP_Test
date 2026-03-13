@@ -1,0 +1,7 @@
+To delete info of cred from GCP:
+gcloud secrets delete client-default-github-token --project capstone-cicd-ai -q
+gcloud secrets delete client-default-jenkins-token --project capstone-cicd-ai -q
+gcloud secrets delete client-default-jenkins-url --project capstone-cicd-ai -q
+gcloud secrets delete client-default-jenkins-user --project capstone-cicd-ai -q
+
+curl https://webhook-handler-389127668230.us-central1.run.app/config/status

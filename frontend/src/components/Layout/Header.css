@@ -311,3 +311,16 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+/* Edit Config button */
+.header__edit-config {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-1) var(--space-3); background: none;
+  border: 1px solid var(--border-primary); border-radius: var(--radius-full);
+  color: var(--text-secondary); font-size: var(--text-xs); font-weight: var(--font-medium);
+  font-family: inherit; cursor: pointer; transition: all var(--transition-fast); white-space: nowrap;
+}
+.header__edit-config:hover {
+  background: var(--bg-hover); border-color: var(--color-primary-400); color: var(--color-primary-600);
+}
+[data-theme="dark"] .header__edit-config:hover { color: var(--color-primary-400); }

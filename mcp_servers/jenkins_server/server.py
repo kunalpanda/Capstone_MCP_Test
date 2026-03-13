@@ -2,6 +2,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import tools
+import os
 
 app = FastAPI(title="Jenkins MCP Server")
 
@@ -13,7 +14,19 @@ async def handle_rpc(request: Request):
     method = payload.get("method")
     params = payload.get("params", {})
     req_id = payload.get("id")
-
+    # Extract client credentials from request headers, fall back to env vars
+    jenkins_token = (
+        request.headers.get("X-Jenkins-Token")
+        or os.getenv("JENKINS_TOKEN")
+    )
+    jenkins_url = (
+        request.headers.get("X-Jenkins-URL")
+        or os.getenv("JENKINS_URL")
+    )
+    jenkins_user = (
+        request.headers.get("X-Jenkins-User")
+        or os.getenv("JENKINS_USER")
+    )
     try:
         # 1️⃣ List available tools
         if method == "tools/list":
@@ -28,7 +41,12 @@ async def handle_rpc(request: Request):
                 raise ValueError(f"Tool '{tool_name}' not found")
 
             func = getattr(tools, tool_name)
-            result = await func(**tool_params)
+            result = await func(
+                jenkins_token=jenkins_token,
+                jenkins_url=jenkins_url,
+                jenkins_user=jenkins_user,
+                **tool_params
+            )
 
         else:
             return JSONResponse({

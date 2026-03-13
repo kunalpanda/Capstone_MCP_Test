@@ -1,6 +1,7 @@
 # mcp_servers/github_server/server.py
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+import os
 import tools
 
 app = FastAPI(title="GitHub MCP JSON-RPC Server")
@@ -13,6 +14,12 @@ async def handle_rpc(request: Request):
     method = payload.get("method")
     params = payload.get("params", {})
     req_id = payload.get("id")
+
+    # Extract client token from request header, fall back to env var
+    github_token = (
+        request.headers.get("X-GitHub-Token")
+        or os.getenv("GITHUB_TOKEN")
+    )
 
     try:
         # === 1. List tools ===
@@ -29,7 +36,7 @@ async def handle_rpc(request: Request):
                 raise ValueError(f"Tool '{tool_name}' not found")
 
             func = getattr(tools, tool_name)
-            result = await func(**tool_params)
+            result = await func(github_token=github_token, **tool_params)
 
         else:
             return JSONResponse({
