@@ -2,11 +2,9 @@
 from typing import Optional
 import asyncio
 import httpx
-from config import JENKINS_URL, JENKINS_USER, JENKINS_TOKEN
-import asyncio
 
-# Jenkins requires basic authentication
-AUTH = (JENKINS_USER, JENKINS_TOKEN)
+# Credentials are passed per-request via jenkins_token, jenkins_url, jenkins_user params
+# No module-level AUTH or JENKINS_URL constants
 
 # === Helper: enforce branch parameter for all builds ===
 
@@ -19,23 +17,25 @@ def enforce_branch_param(parameters: dict | None) -> dict:
     import os
     active_branch = os.getenv("ACTIVE_BRANCH", "main")
     parameters = parameters or {}
-    parameters.setdefault("BRANCH", active_branch)
+    parameters.setdefault("BRANCH_NAME", active_branch)
     return parameters
 
 
 # =========================================================
 # 1️⃣ trigger_build → Start a Jenkins job
 # =========================================================
-async def trigger_build(job_name: str, parameters: dict = None):
+async def trigger_build(job_name: str, parameters: dict = None,
+                        jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
     """
     Trigger a Jenkins job, ensuring BRANCH parameter and proper endpoint usage.
     """
+    auth = (jenkins_user, jenkins_token)
     # ✅ Always enforce branch
     parameters = enforce_branch_param(parameters)
 
-    url = f"{JENKINS_URL}/job/{job_name}/buildWithParameters"
+    url = f"{jenkins_url}/job/{job_name}/buildWithParameters"
 
-    async with httpx.AsyncClient(auth=AUTH) as client:
+    async with httpx.AsyncClient(auth=auth) as client:
         res = await client.post(url, params=parameters)
         if res.status_code not in (200, 201, 202):
             raise RuntimeError(
@@ -67,10 +67,11 @@ async def trigger_build(job_name: str, parameters: dict = None):
 # =========================================================
 # 2️⃣ get_queue_info → Check Jenkins queue
 # =========================================================
-async def get_queue_info():
+async def get_queue_info(jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
     """Fetch current Jenkins queue state."""
-    url = f"{JENKINS_URL}/queue/api/json"
-    async with httpx.AsyncClient(auth=AUTH) as client:
+    auth = (jenkins_user, jenkins_token)
+    url = f"{jenkins_url}/queue/api/json"
+    async with httpx.AsyncClient(auth=auth) as client:
         res = await client.get(url)
         res.raise_for_status()
         data = res.json()
@@ -80,10 +81,12 @@ async def get_queue_info():
 # =========================================================
 # 3️⃣ get_build_info → Retrieve info for a job's last build
 # =========================================================
-async def get_build_info(job_name: str):
+async def get_build_info(job_name: str,
+                         jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
     """Get details of the latest Jenkins build for a job."""
-    url = f"{JENKINS_URL}/job/{job_name}/lastBuild/api/json"
-    async with httpx.AsyncClient(auth=AUTH) as client:
+    auth = (jenkins_user, jenkins_token)
+    url = f"{jenkins_url}/job/{job_name}/lastBuild/api/json"
+    async with httpx.AsyncClient(auth=auth) as client:
         res = await client.get(url)
         if res.status_code != 200:
             raise RuntimeError(
@@ -139,16 +142,15 @@ def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
     }
 
 
-async def get_console_output(job_name: str, build_number: int):
+async def get_console_output(job_name: str, build_number: int,
+                             jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
     """
     Fetch Jenkins console log for a specific build.
-
     Returns raw log with smart truncation (50k char limit).
-    The LLM interprets the output directly - no regex parsing.
-    This approach is language-agnostic and works for any test framework.
     """
-    url = f"{JENKINS_URL}/job/{job_name}/{build_number}/logText/progressiveText"
-    async with httpx.AsyncClient(auth=AUTH) as client:
+    auth = (jenkins_user, jenkins_token)
+    url = f"{jenkins_url}/job/{job_name}/{build_number}/logText/progressiveText"
+    async with httpx.AsyncClient(auth=auth) as client:
         res = await client.get(url)
         if res.status_code != 200:
             raise RuntimeError(
@@ -177,6 +179,9 @@ async def wait_for_build_completion(
     timeout_seconds: int = 600,
     poll_interval: int = 10,
     max_retries: int = 10,
+    jenkins_token: str = None,
+    jenkins_url: str = None,
+    jenkins_user: str = None,
 ):
     """
     Waits for a Jenkins build to complete.
@@ -184,10 +189,11 @@ async def wait_for_build_completion(
     """
     import asyncio
     import time
+    auth = (jenkins_user, jenkins_token)
     start = time.time()
-    url = f"{JENKINS_URL}/job/{job_name}/{build_number}/api/json"
+    url = f"{jenkins_url}/job/{job_name}/{build_number}/api/json"
 
-    async with httpx.AsyncClient(auth=AUTH) as client:
+    async with httpx.AsyncClient(auth=auth) as client:
         retries = 0
         while True:
             try:
@@ -232,7 +238,7 @@ async def wait_for_build_completion(
                     "result": result,
                     "duration": duration,
                     "elapsed_seconds": elapsed,
-                    "url": f"{JENKINS_URL}/job/{job_name}/{build_number}/",
+                    "url": f"{jenkins_url}/job/{job_name}/{build_number}/",
                 }
 
             except httpx.RequestError as e:
@@ -248,20 +254,22 @@ async def wait_for_build_completion(
 # =========================================================
 # 6️⃣ get_test_results → Retrieve test results from build
 # =========================================================
-async def get_test_results(job_name: str, build_number: Optional[int] = None):
+async def get_test_results(job_name: str, build_number: Optional[int] = None,
+                           jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
     """
     Get test results from a Jenkins build.
     If build_number is not provided, uses the last build.
     """
+    auth = (jenkins_user, jenkins_token)
     # Determine build path
     if build_number:
         build_path = f"{build_number}"
     else:
         build_path = "lastBuild"
 
-    url = f"{JENKINS_URL}/job/{job_name}/{build_path}/testReport/api/json"
+    url = f"{jenkins_url}/job/{job_name}/{build_path}/testReport/api/json"
 
-    async with httpx.AsyncClient(auth=AUTH) as client:
+    async with httpx.AsyncClient(auth=auth) as client:
         res = await client.get(url)
 
         # Test results might not exist if no tests ran
@@ -306,36 +314,27 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None):
         }
 
 
-async def get_coverage_report(job_name: str, build_number: int = None):
+async def get_coverage_report(job_name: str, build_number: int = None,
+                              jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
     """
     Retrieve test coverage metrics from Jenkins JaCoCo plugin.
-
-    Args:
-        job_name: Jenkins job name
-        build_number: Build number (optional, defaults to latest build)
-
-    Returns:
-        Coverage percentages for line, branch, method, class, and instruction coverage
     """
+    auth = (jenkins_user, jenkins_token)
     if build_number is None:
-        # Get latest build
-        url = f"{JENKINS_URL}/job/{job_name}/lastBuild/api/json"
+        url = f"{jenkins_url}/job/{job_name}/lastBuild/api/json"
     else:
-        url = f"{JENKINS_URL}/job/{job_name}/{build_number}/api/json"
+        url = f"{jenkins_url}/job/{job_name}/{build_number}/api/json"
 
     async with httpx.AsyncClient() as client:
-        # Get build info to verify it exists
-        res = await client.get(url, auth=AUTH)
+        res = await client.get(url, auth=auth)
         if res.status_code != 200:
             raise RuntimeError(f"Failed to get build info: {res.status_code}")
 
         build_info = res.json()
         actual_build_number = build_info["number"]
 
-        # Try to get JaCoCo coverage data
-        coverage_url = f"{JENKINS_URL}/job/{job_name}/{actual_build_number}/jacoco/api/json?depth=2"
-
-        coverage_res = await client.get(coverage_url, auth=AUTH)
+        coverage_url = f"{jenkins_url}/job/{job_name}/{actual_build_number}/jacoco/api/json?depth=2"
+        coverage_res = await client.get(coverage_url, auth=auth)
 
         if coverage_res.status_code == 404:
             return {
@@ -384,7 +383,7 @@ async def get_coverage_report(job_name: str, build_number: int = None):
                 "instruction": instruction_coverage
             },
             "summary": f"Line: {line_coverage}%, Branch: {branch_coverage}%, Method: {method_coverage}%",
-            "url": f"{JENKINS_URL}/job/{job_name}/{actual_build_number}/jacoco/"
+            "url": f"{jenkins_url}/job/{job_name}/{actual_build_number}/jacoco/"
         }
 
 # =========================================================

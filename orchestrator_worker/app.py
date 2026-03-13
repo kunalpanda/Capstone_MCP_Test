@@ -26,7 +26,7 @@ print("============================================================")
 print()
 
 
-async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, commit_sha: str):
+async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, commit_sha: str, client_secrets: dict = None):
     """
     Execute the orchestrator workflow for the given parameters.
     Runs SYNCHRONOUSLY - blocks until complete, just like local version.
@@ -82,6 +82,20 @@ async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, co
 
         from orchestrator.orchestrator import run_full_test_repair_and_generation_workflow
 
+        # Build per-client MCP headers from secrets
+        github_headers = None
+        jenkins_headers = None
+        if client_secrets:
+            github_headers = {
+                "X-GitHub-Token": client_secrets.get("github_token", "")
+            }
+            jenkins_headers = {
+                "X-Jenkins-Token": client_secrets.get("jenkins_token", ""),
+                "X-Jenkins-URL":   client_secrets.get("jenkins_url", ""),
+                "X-Jenkins-User":  client_secrets.get("jenkins_user", "")
+            }
+            print(f"🔑 MCP headers configured for client")
+
         # Run the workflow SYNCHRONOUSLY (blocking) - just like local version
         # This can take 10-120 minutes - everything freezes until complete
         print("⏳ Starting orchestrator execution (this will block)...")
@@ -94,7 +108,9 @@ async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, co
             workflow_id=workflow_id,
             repo=repo,
             branch=branch,
-            commit_sha=commit_sha
+            commit_sha=commit_sha,
+            github_headers=github_headers,
+            jenkins_headers=jenkins_headers
         )
 
         # Update status to completed
@@ -190,10 +206,18 @@ async def pubsub_push_handler(request: Request):
         repo = payload.get('repo')
         branch = payload.get('branch')
         commit_sha = payload.get('commitSha')
+        client_id = payload.get('clientId', 'default')
 
         if not all([workflow_id, repo, branch, commit_sha]):
             raise HTTPException(
                 status_code=400, detail="Missing required workflow parameters")
+
+        # Fetch per-client secrets from Secret Manager
+        print(f"🔑 Fetching secrets for client_id='{client_id}'...")
+        from orchestrator.gcp_config import get_client_secrets
+        client_secrets = get_client_secrets(client_id, PROJECT_ID)
+        print(f"✅ Secrets fetched for client '{client_id}'")
+        print()
 
         # Run orchestrator SYNCHRONOUSLY (blocking)
         # Everything freezes until complete - just like local version
@@ -203,7 +227,7 @@ async def pubsub_push_handler(request: Request):
         print()
 
         result = await run_orchestrator_workflow(
-            workflow_id, repo, branch, commit_sha
+            workflow_id, repo, branch, commit_sha, client_secrets
         )
 
         print(f"✅ Orchestrator completed, returning 200 OK to Pub/Sub")

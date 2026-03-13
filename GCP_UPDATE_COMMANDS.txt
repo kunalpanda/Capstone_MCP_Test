@@ -1,29 +1,62 @@
-Frontend
+# Frontend
 cd frontend
 npm run build
 gcloud builds submit --tag gcr.io/capstone-cicd-ai/frontend .
 gcloud run deploy frontend --image gcr.io/capstone-cicd-ai/frontend --region us-central1 --allow-unauthenticated
 cd ..
 
-Webhook Handler
+# Webhook Handler
 cd webhook_handler
 gcloud builds submit --tag gcr.io/capstone-cicd-ai/webhook-handler .
 gcloud run deploy webhook-handler --image gcr.io/capstone-cicd-ai/webhook-handler --region us-central1 --allow-unauthenticated
 cd ..
 
-Orchestrator
+# Orchestrator
 cd orchestrator
 gcloud builds submit --tag gcr.io/capstone-cicd-ai/orchestrator .
 gcloud run deploy orchestrator --image gcr.io/capstone-cicd-ai/orchestrator --region us-central1 --allow-unauthenticated
 cd ..
 
-Orchestrator Worker
+# Orchestrator Worker -- This is old Ignore
 cd orchestrator_worker_deploy
 gcloud builds submit --config=cloudbuild.yaml ..
 gcloud run deploy orchestrator-worker --image gcr.io/capstone-cicd-ai/orchestrator-worker --region us-central1 --set-env-vars PROJECT_ID=capstone-cicd-ai,JENKINS_MCP_URL=https://jenkins-mcp-389127668230.us-central1.run.app,GITHUB_MCP_URL=https://github-mcp-389127668230.us-central1.run.app,PUBSUB_SUBSCRIPTION=workflow-commands-sub
 cd ..
 
+# Backend
 cd backend
 gcloud builds submit --tag gcr.io/capstone-cicd-ai/backend-websocket .
 gcloud run deploy backend-websocket --image gcr.io/capstone-cicd-ai/backend-websocket --region us-central1 --allow-unauthenticated --port 8000 --set-env-vars PROJECT_ID=capstone-cicd-ai,PUBSUB_TOPIC_EVENTS=workflow-events,PUBSUB_SUBSCRIPTION_EVENTS=workflow-events-sub
 cd ..
+
+
+# GitHub MCP - no secrets needed anymore
+cd mcp_servers/github_server
+gcloud builds submit --tag gcr.io/capstone-cicd-ai/github-mcp .
+gcloud run deploy github-mcp --image gcr.io/capstone-cicd-ai/github-mcp --region us-central1 --allow-unauthenticated
+cd ../..
+
+# Jenkins MCP - no secrets or JENKINS_URL env var needed anymore  
+cd mcp_servers/jenkins_server
+gcloud builds submit --tag gcr.io/capstone-cicd-ai/jenkins-mcp .
+gcloud run deploy jenkins-mcp --image gcr.io/capstone-cicd-ai/jenkins-mcp --region us-central1 --allow-unauthenticated
+cd ../..
+
+# Orchestrator Worker - add Secret Manager access
+cd orchestrator_worker_deploy
+gcloud builds submit --config=cloudbuild.yaml ..
+gcloud run deploy orchestrator-worker --image gcr.io/capstone-cicd-ai/orchestrator-worker \
+  --region us-central1 \
+  --set-env-vars PROJECT_ID=capstone-cicd-ai,JENKINS_MCP_URL=https://jenkins-mcp-389127668230.us-central1.run.app,GITHUB_MCP_URL=https://github-mcp-389127668230.us-central1.run.app,PUBSUB_SUBSCRIPTION=workflow-commands-sub
+cd ..
+
+
+# Redeploy MCP servers with baked-in tokens (old behaviour) -- IN CASE MULTI TENANT BREAKS
+gcloud run deploy github-mcp --image gcr.io/capstone-cicd-ai/github-mcp \
+  --region us-central1 --allow-unauthenticated \
+  --set-secrets GITHUB_TOKEN=github-token:latest
+
+gcloud run deploy jenkins-mcp --image gcr.io/capstone-cicd-ai/jenkins-mcp \
+  --region us-central1 --allow-unauthenticated \
+  --set-secrets JENKINS_TOKEN=jenkins-token:latest \
+  --set-env-vars JENKINS_URL=http://34.59.25.142:8080
