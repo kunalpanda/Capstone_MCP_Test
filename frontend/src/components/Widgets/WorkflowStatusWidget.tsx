@@ -1,5 +1,5 @@
 // src/components/Widgets/WorkflowStatusWidget.tsx
-// Displays workflow status, iteration progress, and elapsed time
+// Displays workflow status, interaction gauge (depleting), and elapsed time
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -18,28 +18,98 @@ interface WorkflowStatusWidgetProps {
   workflowStartTime: number | null;
 }
 
-export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({ 
-  state, 
-  workflowStartTime 
+/**
+ * SVG gauge component showing remaining interactions.
+ * Starts at 100% (all interactions available) and depletes as interactions are consumed.
+ * Color shifts: green (>50% remaining), amber (≤50%), red (≤20%)
+ */
+const InteractionGauge: React.FC<{ current: number; max: number }> = ({ current, max }) => {
+  const size = 130;
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const remaining = Math.max(max - current, 0);
+  const remainingPercent = max > 0 ? remaining / max : 1;
+  const strokeDashoffset = circumference * (1 - remainingPercent);
+
+  const getGaugeColor = () => {
+    if (remainingPercent > 0.5) return 'var(--color-success-500)';
+    if (remainingPercent > 0.2) return 'var(--color-warning-500)';
+    return 'var(--color-error-500)';
+  };
+
+  const getTrackColor = () => {
+    if (remainingPercent > 0.5) return 'var(--bg-tertiary)';
+    if (remainingPercent > 0.2) return 'rgba(245, 158, 11, 0.1)';
+    return 'rgba(239, 68, 68, 0.1)';
+  };
+
+  const gaugeColor = getGaugeColor();
+
+  return (
+    <div className="interaction-gauge">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="interaction-gauge__svg"
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={getTrackColor()}
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={gaugeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          className="interaction-gauge__fill"
+        />
+      </svg>
+
+      <div className="interaction-gauge__label">
+        <span className="interaction-gauge__value" style={{ color: gaugeColor }}>
+          {remaining}
+        </span>
+        <span className="interaction-gauge__subtext">
+          of {max} remaining
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
+  state,
+  workflowStartTime
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Calculate elapsed time from start time
   useEffect(() => {
-    // If no start time or not running/complete, don't update
     if (!workflowStartTime) {
       setElapsedSeconds(0);
       return;
     }
 
-    // Calculate initial elapsed time
     const calculateElapsed = () => {
       return Math.floor((Date.now() - workflowStartTime) / 1000);
     };
 
     setElapsedSeconds(calculateElapsed());
 
-    // Only keep updating if workflow is running
+    // Only keep ticking while running; freeze on complete/error
     if (state.status !== 'running') {
       return;
     }
@@ -55,16 +125,13 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hrs > 0) {
       return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
+
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
-
-  const progressPercent = state.maxIterations > 0
-    ? (state.currentIteration / state.maxIterations) * 100
-    : 0;
 
   const getStatusConfig = () => {
     switch (state.status) {
@@ -112,6 +179,7 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
   };
 
   const statusConfig = getStatusConfig();
+  const showTimer = workflowStartTime !== null && state.status !== 'idle';
 
   return (
     <div className="workflow-status-widget">
@@ -126,50 +194,37 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
         </div>
       </div>
 
-      {/* Progress Section */}
-      <div className="workflow-status__section">
-        <div className="workflow-status__metric">
-          <div className="workflow-status__metric-header">
-            <Activity size={16} />
-            <span>Iteration Progress</span>
-          </div>
-          <div className="workflow-status__progress">
-            <div className="workflow-status__progress-info">
-              <span className="workflow-status__progress-current">
-                {state.currentIteration}
-              </span>
-              <span className="workflow-status__progress-separator">/</span>
-              <span className="workflow-status__progress-max">
-                {state.maxIterations}
-              </span>
+      {/* Gauge + Timer side by side */}
+      <div className="workflow-status__metrics-row">
+        {/* Interaction Gauge */}
+        <div className="workflow-status__section">
+          <div className="workflow-status__metric workflow-status__metric--center">
+            <div className="workflow-status__metric-header">
+              <Activity size={16} />
+              <span>Interaction Cap</span>
             </div>
-            <div className="workflow-status__progress-bar">
-              <div
-                className="workflow-status__progress-fill"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <span className="workflow-status__progress-percent">
-              {progressPercent.toFixed(0)}%
-            </span>
+            <InteractionGauge
+              current={state.currentInteraction}
+              max={state.maxInteractions}
+            />
           </div>
         </div>
-      </div>
 
-      {/* Timer Section */}
-      <div className="workflow-status__section">
-        <div className="workflow-status__metric">
-          <div className="workflow-status__metric-header">
-            <Clock size={16} />
-            <span>Elapsed Time</span>
-          </div>
-          <div className="workflow-status__timer">
-            <span className="workflow-status__timer-value">
-              {formatTime(elapsedSeconds)}
-            </span>
-            {state.status === 'running' && (
-              <span className="workflow-status__timer-indicator" />
-            )}
+        {/* Timer Section */}
+        <div className="workflow-status__section">
+          <div className="workflow-status__metric">
+            <div className="workflow-status__metric-header">
+              <Clock size={16} />
+              <span>Elapsed Time</span>
+            </div>
+            <div className="workflow-status__timer">
+              <span className="workflow-status__timer-value">
+                {showTimer ? formatTime(elapsedSeconds) : '00:00'}
+              </span>
+              {state.status === 'running' && (
+                <span className="workflow-status__timer-indicator" />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -185,9 +240,9 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
           </div>
           <div className="workflow-status__stat">
             <span className="workflow-status__stat-value">
-              {state.currentIteration}
+              {state.currentInteraction}
             </span>
-            <span className="workflow-status__stat-label">Iterations</span>
+            <span className="workflow-status__stat-label">Interactions</span>
           </div>
           <div className="workflow-status__stat">
             <span className="workflow-status__stat-value">
