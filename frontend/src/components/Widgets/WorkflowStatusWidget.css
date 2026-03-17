@@ -82,11 +82,76 @@
   flex-direction: column;
 }
 
+/* Metrics Row — gauge and timer side by side */
+.workflow-status__metrics-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.workflow-status__metrics-row > .workflow-status__section {
+  flex: 1;
+  align-items: center;
+}
+
+/* ==========================================================================
+   Interaction Gauge — depleting ring
+   ========================================================================== */
+
+.interaction-gauge {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.interaction-gauge__svg {
+  position: absolute;
+  inset: 0;
+}
+
+.interaction-gauge__fill {
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.4s ease;
+}
+
+.interaction-gauge__label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.interaction-gauge__value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  font-family: var(--font-mono);
+  transition: color 0.4s ease;
+}
+
+.interaction-gauge__subtext {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 /* Metric */
 .workflow-status__metric {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.workflow-status__metric--center {
+  align-items: center;
 }
 
 .workflow-status__metric-header {
@@ -100,63 +165,6 @@
 
 .workflow-status__metric-header svg {
   color: var(--text-muted);
-}
-
-/* Progress */
-.workflow-status__progress {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.workflow-status__progress-info {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-1);
-  min-width: 60px;
-}
-
-.workflow-status__progress-current {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-
-.workflow-status__progress-separator {
-  font-size: var(--text-lg);
-  color: var(--text-muted);
-}
-
-.workflow-status__progress-max {
-  font-size: var(--text-base);
-  font-weight: var(--font-medium);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-.workflow-status__progress-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.workflow-status__progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-primary-500) 0%, var(--color-accent-500) 100%);
-  border-radius: var(--radius-full);
-  transition: width var(--transition-base);
-}
-
-.workflow-status__progress-percent {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-primary-500);
-  font-family: var(--font-mono);
-  min-width: 40px;
-  text-align: right;
 }
 
 /* Timer */
@@ -217,13 +225,9 @@
 
 /* Responsive */
 @media (max-width: 480px) {
-  .workflow-status__progress {
+  .workflow-status__metrics-row {
     flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .workflow-status__progress-bar {
-    width: 100%;
+    gap: var(--space-4);
   }
 
   .workflow-status__stats {
