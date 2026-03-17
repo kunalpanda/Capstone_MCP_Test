@@ -1,60 +1,318 @@
-.config-form { display: flex; flex-direction: column; gap: var(--space-6); }
-.config-form--compact { gap: var(--space-4); }
-.config-form__fields { display: flex; flex-direction: column; gap: var(--space-5); }
-.config-form--compact .config-form__fields { gap: var(--space-4); }
-.config-form__field { display: flex; flex-direction: column; gap: var(--space-2); }
+/* src/components/Config/ConfigForm.css */
+/* Creative level 1.0 — shimmer button, enhanced focus states, staggered section reveals */
 
-.config-form__label {
-  display: flex; align-items: center; gap: var(--space-2);
-  font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-secondary);
-}
-.config-form__label-icon { color: var(--color-primary-500); display: flex; align-items: center; }
+/* =============================================================================
+   Keyframes
+   ============================================================================= */
 
-.config-form__input-wrap { position: relative; display: flex; align-items: center; }
-.config-form__input {
-  width: 100%; padding: var(--space-3) var(--space-4); padding-right: 2.5rem;
-  border: 1px solid var(--border-primary); border-radius: var(--radius-md);
-  background: var(--bg-primary); color: var(--text-primary);
-  font-size: var(--text-sm); font-family: inherit; outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-.config-form__input:focus {
-  border-color: var(--color-primary-500);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-}
-.config-form__input::placeholder {
-  color: var(--text-muted); font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8em;
-}
-[data-theme="dark"] .config-form__input { background: var(--bg-tertiary); border-color: var(--border-secondary); }
-
-.config-form__reveal {
-  position: absolute; right: var(--space-3); display: flex; align-items: center; justify-content: center;
-  background: none; border: none; cursor: pointer; color: var(--text-muted);
-  padding: var(--space-1); border-radius: var(--radius-sm); transition: color var(--transition-fast);
-}
-.config-form__reveal:hover { color: var(--text-secondary); }
-
-.config-form__hint { font-size: var(--text-xs); color: var(--text-muted); margin: 0; line-height: 1.4; }
-
-.config-form__error {
-  padding: var(--space-3) var(--space-4); background: var(--color-error-50);
-  border: 1px solid var(--color-error-100); border-radius: var(--radius-md);
-  color: var(--color-error-600); font-size: var(--text-sm); line-height: 1.5;
-}
-[data-theme="dark"] .config-form__error {
-  background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: var(--color-error-400);
+/* Submit button shimmer sweep on hover */
+@keyframes shimmer-sweep {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
 }
 
-.config-form__submit {
-  display: flex; align-items: center; justify-content: center; gap: var(--space-2);
-  width: 100%; padding: var(--space-3) var(--space-4);
-  background: var(--color-primary-600); color: #fff; border: none;
-  border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: var(--font-semibold);
-  font-family: inherit; cursor: pointer;
-  transition: background-color var(--transition-fast), opacity var(--transition-fast);
+/* Section stagger — form sections slide up after card enters */
+@keyframes section-reveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
-.config-form__submit:hover:not(:disabled) { background: var(--color-primary-700); }
-.config-form__submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* =============================================================================
+   Form root
+   ============================================================================= */
+
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.config-form--compact {
+  gap: var(--space-4);
+}
+
+/* =============================================================================
+   Section grouping (GitHub / Jenkins) — staggered reveal
+   ============================================================================= */
+
+.config-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  opacity: 0;
+}
+
+/* GitHub section enters first */
+.config-form__section:nth-child(1) {
+  animation: section-reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+}
+
+/* Jenkins section follows */
+.config-form__section:nth-child(2) {
+  animation: section-reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+}
+
+/* In compact (modal) mode — no animation delay needed */
+.config-form--compact .config-form__section {
+  opacity: 1;
+  animation: none;
+}
+
+.config-form__section-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* =============================================================================
+   Field list
+   ============================================================================= */
+
+.config-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.config-form--compact .config-form__fields {
+  gap: var(--space-3);
+}
+
+.config-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* =============================================================================
+   Label
+   ============================================================================= */
+
+.config-form__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+/* Label brightens when its field is focused — JS-free via :focus-within */
+.config-form__field:focus-within .config-form__label {
+  color: var(--color-primary-500);
+}
+
+.config-form__label-icon {
+  display: flex;
+  align-items: center;
+  color: var(--color-primary-500);
+  transition: transform var(--transition-fast);
+}
+
+.config-form__field:focus-within .config-form__label-icon {
+  transform: scale(1.15);
+}
+
+/* =============================================================================
+   Input
+   ============================================================================= */
+
+.config-form__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.config-form__input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  padding-right: 2.5rem;
+  background: var(--widget-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--widget-border);
+  /* Accent left edge appears on focus */
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    border-left-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.config-form__input:focus {
+  border-color: var(--color-primary-500);
+  border-left-color: var(--color-primary-500);
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.16),
+    inset 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .config-form__input:focus {
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.22),
+    inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.config-form__input::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+
+/* Reveal toggle (show/hide secret) */
+.config-form__reveal {
+  position: absolute;
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.config-form__reveal:hover {
+  color: var(--color-primary-500);
+  transform: scale(1.1);
+}
+
+/* =============================================================================
+   Hint text
+   ============================================================================= */
+
+.config-form__hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* =============================================================================
+   Error banner
+   ============================================================================= */
+
+.config-form__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-50);
+  border: 1px solid var(--color-error-100);
+  border-left: 3px solid var(--color-error-500);
+  border-radius: var(--radius-md);
+  color: var(--color-error-600);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .config-form__error {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.25);
+  border-left-color: var(--color-error-500);
+  color: var(--color-error-400);
+}
+
+/* =============================================================================
+   Submit button — gradient + shimmer sweep on hover
+   ============================================================================= */
+
+.config-form__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+
+  /* Base gradient */
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-500) 0%,
+    var(--color-accent-500) 100%
+  );
+
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 0 rgba(99, 102, 241, 0);
+  transition:
+    opacity var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+
+  /* Stagger — enters last after sections */
+  opacity: 0;
+  animation: section-reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.85s forwards;
+
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer overlay layer */
+.config-form__submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-position: -200% center;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.config-form__submit:hover:not(:disabled)::after {
+  opacity: 1;
+  animation: shimmer-sweep 0.65s linear forwards;
+}
+
+.config-form__submit:hover:not(:disabled) {
+  box-shadow:
+    var(--shadow-md),
+    0 0 20px rgba(99, 102, 241, 0.35),
+    0 0 40px rgba(168, 85, 247, 0.15);
+  transform: translateY(-2px);
+}
+
+.config-form__submit:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.config-form__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* In compact mode — no animation delay */
+.config-form--compact .config-form__submit {
+  opacity: 1;
+  animation: none;
+}
+
 .animate-spin { animation: spin 0.7s linear infinite; }
