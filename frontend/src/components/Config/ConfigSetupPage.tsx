@@ -7,12 +7,25 @@ interface ConfigSetupPageProps { onConfigured: () => void; }
 
 export const ConfigSetupPage: React.FC<ConfigSetupPageProps> = ({ onConfigured }) => (
   <div className="config-setup">
+
+    {/* ── Left panel ─────────────────────────────────────── */}
     <div className="config-setup__panel config-setup__panel--left">
+
+      {/* Ambient drifting orbs — pure CSS animation */}
+      <div className="config-setup__orb config-setup__orb--1" aria-hidden="true" />
+      <div className="config-setup__orb config-setup__orb--2" aria-hidden="true" />
+
+      {/* Brand */}
       <div className="config-setup__brand">
-        <div className="config-setup__logo"><Bot size={36} /></div>
+        <div className="config-setup__logo">
+          <Bot size={30} />
+          <div className="config-setup__logo-ring" aria-hidden="true" />
+        </div>
         <h1 className="config-setup__title">Capstone CI/CD</h1>
         <p className="config-setup__subtitle">Autonomous AI-powered pipeline orchestration</p>
       </div>
+
+      {/* Feature list */}
       <ul className="config-setup__features">
         <li className="config-setup__feature">
           <span className="config-setup__feature-icon"><Zap size={18} /></span>
@@ -37,8 +50,11 @@ export const ConfigSetupPage: React.FC<ConfigSetupPageProps> = ({ onConfigured }
         </li>
       </ul>
     </div>
+
+    {/* ── Right panel ────────────────────────────────────── */}
     <div className="config-setup__panel config-setup__panel--right">
-      <div className="config-setup__form-wrap">
+      {/* Glass card wraps the form for lifted appearance */}
+      <div className="config-setup__glass-card">
         <div className="config-setup__form-header">
           <h2>Connect your services</h2>
           <p>Provide your GitHub and Jenkins credentials to get started.</p>
@@ -46,6 +62,7 @@ export const ConfigSetupPage: React.FC<ConfigSetupPageProps> = ({ onConfigured }
         <ConfigForm onSuccess={onConfigured} />
       </div>
     </div>
+
   </div>
 );
 
