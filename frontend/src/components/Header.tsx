@@ -24,8 +24,8 @@ export const Header: React.FC<HeaderProps> = ({ state, isConnected, onViewPR }) 
   // DEBUG: Log state to see what we're getting
   console.log('🔍 Header Debug:', {
     status: state.status,
-    currentIteration: state.currentIteration,
-    maxIterations: state.maxIterations,
+    currentIteration: state.currentInteraction,
+    maxIterations: state.maxInteractions,
     statusType: typeof state.status,
     isRunning: state.status === 'running'
   });
@@ -91,8 +91,8 @@ export const Header: React.FC<HeaderProps> = ({ state, isConnected, onViewPR }) 
     }
   };
 
-  const progressPercent = state.maxIterations > 0
-    ? (state.currentIteration / state.maxIterations) * 100
+  const progressPercent = state.maxInteractions > 0
+    ? (state.currentInteraction / state.maxInteractions) * 100
     : 0;
 
   return (
@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({ state, isConnected, onViewPR }) 
           </div>
 
           <div className="stat-item">
-            <span>Iteration: <strong>{state.currentIteration}/{state.maxIterations}</strong></span>
+            <span>Iteration: <strong>{state.currentInteraction}/{state.maxInteractions}</strong></span>
             <div className="progress-bar">
               <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
             </div>

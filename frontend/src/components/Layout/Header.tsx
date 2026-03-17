@@ -92,10 +92,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Reset timer when workflow starts
   useEffect(() => {
-    if (state.status === 'running' && state.currentIteration === 1) {
+    if (state.status === 'running' && state.currentInteraction === 1) {
       setElapsedTime(0);
     }
-  }, [state.status, state.currentIteration]);
+  }, [state.status, state.currentInteraction]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -103,9 +103,15 @@ export const Header: React.FC<HeaderProps> = ({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const progressPercent = state.maxIterations > 0
-    ? (state.currentIteration / state.maxIterations) * 100
-    : 0;
+  // Remaining interactions for header pill
+  const remaining = Math.max(state.maxInteractions - state.currentInteraction, 0);
+  const remainingPercent = state.maxInteractions > 0 ? remaining / state.maxInteractions : 1;
+
+  const getRemainingColor = () => {
+    if (remainingPercent > 0.5) return 'header__remaining--ok';
+    if (remainingPercent > 0.2) return 'header__remaining--warn';
+    return 'header__remaining--critical';
+  };
 
   const getStatusConfig = () => {
     switch (state.status) {
@@ -185,26 +191,16 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Center section - Progress */}
+        {/* Center section - Remaining interactions pill (large screens only) */}
         <div className="header__center">
           {state.status === 'running' && (
-            <div className="header__progress-container">
-              <div className="header__progress-info">
-                <Activity size={14} />
-                <span>Iteration</span>
-                <span className="header__progress-count">
-                  {state.currentIteration} / {state.maxIterations}
-                </span>
-              </div>
-              <div className="header__progress-bar">
-                <div
-                  className="header__progress-fill"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <span className="header__progress-percent">
-                {progressPercent.toFixed(0)}%
+            <div className={`header__remaining ${getRemainingColor()}`}>
+              <Activity size={14} />
+              <span className="header__remaining-count">{remaining}</span>
+              <span className="header__remaining-label">
+                of {state.maxInteractions} remaining
               </span>
+              <span className="header__remaining-dot" />
             </div>
           )}
         </div>

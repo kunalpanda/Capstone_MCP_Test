@@ -18,6 +18,7 @@ interface LayoutProps {
   onViewChange: (view: ViewMode) => void;
   onViewPR?: () => void;
   onEditConfig: () => void;
+  workflowStartTime: number | null;  // kept for potential future use; not forwarded to Header
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'orchestrator-sidebar-collapsed';
@@ -31,7 +32,8 @@ export const Layout: React.FC<LayoutProps> = ({
   activeView,
   onViewChange,
   onViewPR,
-  onEditConfig
+  onEditConfig,
+  workflowStartTime  // accepted but not forwarded — Header owns its own timer
 }) => {
   // Initialize collapsed state from localStorage
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
