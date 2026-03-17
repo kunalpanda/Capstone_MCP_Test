@@ -62,11 +62,11 @@ function App() {
   }, [state.status, state.prSummary]);
 
   useEffect(() => {
-    if (state.status === 'running' && state.currentIteration === 1) {
+    if (state.status === 'running' && state.currentInteraction === 1) {
       hasShownModal.current = false;
       setWorkflowStartTime(Date.now());
     }
-  }, [state.status, state.currentIteration]);
+  }, [state.status, state.currentInteraction]);
 
   const handleViewPR = () => {
     if (state.prSummary) setIsModalOpen(true);
@@ -121,6 +121,7 @@ function App() {
         onViewChange={setActiveView}
         onViewPR={handleViewPR}
         onEditConfig={() => setIsConfigModalOpen(true)}
+        workflowStartTime={workflowStartTime}
       >
         {renderView()}
       </Layout>

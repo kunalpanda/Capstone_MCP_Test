@@ -108,8 +108,8 @@ export interface WorkflowCompleteData {
 // Orchestrator state
 export interface OrchestratorState {
   status: 'idle' | 'running' | 'complete' | 'error';
-  currentIteration: number;
-  maxIterations: number;
+  currentInteraction: number;  // renamed from currentIteration
+  maxInteractions: number;     // renamed from maxIterations
   repo: string;
   branch: string;
   recentActions: string[];
