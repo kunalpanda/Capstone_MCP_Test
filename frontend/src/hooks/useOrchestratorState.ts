@@ -22,6 +22,7 @@ function applyEvent(prev: OrchestratorState, event: BaseEvent): OrchestratorStat
       newState.prSummary = null;
       newState.currentCoverage = null;
       newState.targetCoverage = null;
+      newState.productivityAnalysis = null;
       break;
 
     case 'iteration_start':
@@ -56,6 +57,20 @@ function applyEvent(prev: OrchestratorState, event: BaseEvent): OrchestratorStat
       };
       break;
 
+    case 'productivity_analysis':
+      newState.productivityAnalysis = {
+        breakdown: event.data.breakdown,
+        total_manual_minutes: event.data.total_manual_minutes,
+        total_manual_hours: event.data.total_manual_hours,
+        ai_resolution_minutes: event.data.ai_resolution_minutes,
+        time_saved_minutes: event.data.time_saved_minutes,
+        hourly_rate: event.data.hourly_rate,
+        cost_saved: event.data.cost_saved,
+        iteration_count: event.data.iteration_count,
+        files_modified: event.data.files_modified
+      };
+      break;
+
     case 'tool_call':
       newState.recentActions = [
         `Called ${event.data.tool_name}`,
@@ -79,7 +94,8 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
     totalActions: 0,
     prSummary: null,
     currentCoverage: null,
-    targetCoverage: null
+    targetCoverage: null,
+    productivityAnalysis: null
   });
 
   // Track how many events we've already processed so we never skip

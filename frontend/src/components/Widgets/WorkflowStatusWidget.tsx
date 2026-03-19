@@ -96,23 +96,41 @@ export const WorkflowStatusWidget: React.FC<WorkflowStatusWidgetProps> = ({
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Calculate elapsed time from start time
+  // Freeze the timer when the workflow stops running.
+  // frozenTime holds the elapsed value captured at the moment status
+  // left 'running'. Once set, the timer displays this value and
+  // ignores Date.now() — preventing the tab-switch drift bug.
+  const frozenTimeRef = React.useRef<number | null>(null);
+
   useEffect(() => {
     if (!workflowStartTime) {
       setElapsedSeconds(0);
+      frozenTimeRef.current = null;
       return;
     }
 
+    // Reset frozen time when a new workflow starts
+    if (state.status === 'running') {
+      frozenTimeRef.current = null;
+    }
+
+    // If not running and we haven't frozen yet, capture the current value
+    if (state.status !== 'running' && frozenTimeRef.current === null) {
+      frozenTimeRef.current = Math.floor((Date.now() - workflowStartTime) / 1000);
+    }
+
+    // If frozen, use the frozen value and don't start an interval
+    if (frozenTimeRef.current !== null) {
+      setElapsedSeconds(frozenTimeRef.current);
+      return;
+    }
+
+    // Running: tick every second
     const calculateElapsed = () => {
       return Math.floor((Date.now() - workflowStartTime) / 1000);
     };
 
     setElapsedSeconds(calculateElapsed());
-
-    // Only keep ticking while running; freeze on complete/error
-    if (state.status !== 'running') {
-      return;
-    }
 
     const interval = setInterval(() => {
       setElapsedSeconds(calculateElapsed());

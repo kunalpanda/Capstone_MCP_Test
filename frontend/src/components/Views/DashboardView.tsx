@@ -7,7 +7,8 @@ import {
   Target,
   GitBranch,
   Wrench,
-  Radio
+  Radio,
+  TrendingUp
 } from 'lucide-react';
 import { Widget, DraggableGrid } from '../Dashboard';
 import {
@@ -15,7 +16,8 @@ import {
   CoverageWidget,
   RepositoryWidget,
   RecentActionsWidget,
-  EventStreamWidget
+  EventStreamWidget,
+  ProductivityWidget
 } from '../Widgets';
 import { useWidgetLayout } from '../../hooks';
 import { OrchestratorState, BaseEvent } from '../../services/types';
@@ -34,6 +36,7 @@ const WIDGET_ICONS: Record<string, React.ReactNode> = {
   'repository': <GitBranch size={16} />,
   'recent-actions': <Wrench size={16} />,
   'event-stream': <Radio size={16} />,
+  'productivity': <TrendingUp size={16} />,
 };
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ state, events, workflowStartTime }) => {
@@ -65,6 +68,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ state, events, wor
         return <RecentActionsWidget actions={state.recentActions} totalActions={state.totalActions} />;
       case 'event-stream':
         return <EventStreamWidget events={events} />;
+      case 'productivity':
+        return <ProductivityWidget analysis={state.productivityAnalysis} />;
       default:
         return <div>Unknown widget</div>;
     }
