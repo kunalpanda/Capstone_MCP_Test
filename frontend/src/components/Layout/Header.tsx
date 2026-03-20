@@ -1,7 +1,7 @@
 // src/components/Layout/Header.tsx
 // Professional header with status indicators, progress, and controls
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Wifi,
   WifiOff,
@@ -26,6 +26,7 @@ interface HeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
   onEditConfig: () => void;
+  workflowStartTime: number | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,10 +34,12 @@ export const Header: React.FC<HeaderProps> = ({
   isConnected,
   theme,
   onThemeToggle,
-  onEditConfig
+  onEditConfig,
+  workflowStartTime
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [stopping, setStopping] = useState(false);
+  const frozenTimeRef = useRef<number | null>(null);
 
   const handleEmergencyStop = async () => {
   if (!window.confirm(
@@ -77,25 +80,37 @@ export const Header: React.FC<HeaderProps> = ({
   }
 };
 
-  // Timer for running workflows
+  // Timer — synchronized with WorkflowStatusWidget via shared workflowStartTime.
+  // Uses the same frozen-ref pattern to prevent drift on tab switches.
   useEffect(() => {
-    if (state.status !== 'running') {
+    if (!workflowStartTime) {
+      setElapsedTime(0);
+      frozenTimeRef.current = null;
       return;
     }
 
+    if (state.status === 'running') {
+      frozenTimeRef.current = null;
+    }
+
+    if (state.status !== 'running' && frozenTimeRef.current === null) {
+      frozenTimeRef.current = Math.floor((Date.now() - workflowStartTime) / 1000);
+    }
+
+    if (frozenTimeRef.current !== null) {
+      setElapsedTime(frozenTimeRef.current);
+      return;
+    }
+
+    const calculateElapsed = () => Math.floor((Date.now() - workflowStartTime) / 1000);
+    setElapsedTime(calculateElapsed());
+
     const interval = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
+      setElapsedTime(calculateElapsed());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [state.status]);
-
-  // Reset timer when workflow starts
-  useEffect(() => {
-    if (state.status === 'running' && state.currentInteraction === 1) {
-      setElapsedTime(0);
-    }
-  }, [state.status, state.currentInteraction]);
+  }, [workflowStartTime, state.status]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);

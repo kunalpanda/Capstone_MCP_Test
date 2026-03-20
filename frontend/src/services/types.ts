@@ -9,6 +9,7 @@ export type EventType =
   | 'state_update'
   | 'workflow_complete'
   | 'pr_summary'
+  | 'productivity_analysis'
   | 'error'
   | 'log';
 
@@ -105,6 +106,28 @@ export interface WorkflowCompleteData {
   duration_seconds: number | null;
 }
 
+// Productivity analysis from post-workflow LLM classification
+export interface ProductivityBreakdownItem {
+  classification?: string;
+  components?: Record<string, number>;
+  count?: number;
+  created?: boolean;
+  files_verified?: number;
+  minutes: number;
+}
+
+export interface ProductivityAnalysis {
+  breakdown: Record<string, ProductivityBreakdownItem>;
+  total_manual_minutes: number;
+  total_manual_hours: number;
+  ai_resolution_minutes: number;
+  time_saved_minutes: number;
+  hourly_rate: number;
+  cost_saved: number;
+  iteration_count: number;
+  files_modified: number;
+}
+
 // Orchestrator state
 export interface OrchestratorState {
   status: 'idle' | 'running' | 'complete' | 'error';
@@ -117,4 +140,5 @@ export interface OrchestratorState {
   prSummary: PRSummaryData | null;
   currentCoverage: CoverageMetrics | null;
   targetCoverage: CoverageMetrics | null;
+  productivityAnalysis: ProductivityAnalysis | null;
 }

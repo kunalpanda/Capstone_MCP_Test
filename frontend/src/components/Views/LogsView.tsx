@@ -213,53 +213,56 @@ export const LogsView: React.FC<LogsViewProps> = ({ events }) => {
     events.forEach(event => {
       // Look for get_test_results tool results
       if (event.type === 'tool_result' && event.data.tool_name === 'get_test_results') {
-        const resultStr: string = String(event.data.result_summary || '');
-        
-        // Parse the Python dict string format from result_summary
-        // Format: {'job_name': '...', 'build_number': 19, 'total_count': 10, ...}
-        const parseValue = (key: string): string | null => {
-          // Match both 'key': value and "key": value formats
-          const regex = new RegExp(`['"]${key}['"]:\s*([^,}]+)`);
-          const match = resultStr.match(regex);
-          if (match) {
-            // Clean up the value (remove quotes, whitespace)
-            return match[1].trim().replace(/^['"]|['"]$/g, '');
-          }
-          return null;
-        };
+        // The orchestrator emits the full result object as event.data.result (a JSON dict).
+        // Fall back to parsing event.data.result_summary (truncated string) only if needed.
+        const resultObj = event.data.result;
 
-        const totalCount = parseInt(parseValue('total_count') || '0');
-        const passCount = parseInt(parseValue('pass_count') || '0');
-        const failCount = parseInt(parseValue('fail_count') || '0');
-        const skipCount = parseInt(parseValue('skip_count') || '0');
-        const buildNumber = parseValue('build_number') || 'N/A';
-        const duration = parseFloat(parseValue('duration') || '0');
-
-        // Extract failed tests if present in the result
+        let totalCount = 0;
+        let passCount = 0;
+        let failCount = 0;
+        let skipCount = 0;
+        let buildNumber: string | number = 'N/A';
+        let duration = 0;
         const failedTests: TestResult[] = [];
-        
-        // Try to parse failed_tests array from the string
-        // Format: 'failed_tests': [{'name': '...', 'class_name': '...', 'error_message': '...'}, ...]
-        const failedTestsMatch = resultStr.match(/'failed_tests':\s*\[([^\]]*)]/);
-        if (failedTestsMatch && failedTestsMatch[1].trim()) {
-          // Simple extraction of test names and errors from the array string
-          const testEntries = failedTestsMatch[1].split('},');
-          testEntries.forEach(entry => {
-            const nameMatch = entry.match(/'name':\s*['"]([^'"]+)['"]/);
-            const classMatch = entry.match(/'class_name':\s*['"]([^'"]+)['"]/);
-            const errorMatch = entry.match(/'error_message':\s*['"]([^'"]+)['"]/);
-            const durationMatch = entry.match(/'duration':\s*([\d.]+)/);
-            
-            if (nameMatch) {
-              failedTests.push({
-                name: nameMatch[1],
-                className: classMatch ? classMatch[1] : undefined,
-                status: 'failed',
-                duration: durationMatch ? Math.round(parseFloat(durationMatch[1]) * 1000) : undefined,
-                error: errorMatch ? errorMatch[1] : 'Test failed'
-              });
-            }
-          });
+
+        if (resultObj && typeof resultObj === 'object') {
+          // === Primary path: read structured JSON directly ===
+          totalCount = Number(resultObj.total_count) || 0;
+          passCount = Number(resultObj.pass_count) || 0;
+          failCount = Number(resultObj.fail_count) || 0;
+          skipCount = Number(resultObj.skip_count) || 0;
+          buildNumber = resultObj.build_number ?? 'N/A';
+          duration = Number(resultObj.duration) || 0;
+
+          // Parse failed_tests array
+          if (Array.isArray(resultObj.failed_tests)) {
+            resultObj.failed_tests.forEach((ft: Record<string, unknown>) => {
+              if (ft && ft.name) {
+                failedTests.push({
+                  name: String(ft.name),
+                  className: ft.class_name ? String(ft.class_name) : undefined,
+                  status: 'failed',
+                  duration: ft.duration ? Math.round(Number(ft.duration) * 1000) : undefined,
+                  error: ft.error_message ? String(ft.error_message) : 'Test failed'
+                });
+              }
+            });
+          }
+        } else {
+          // === Fallback: parse result_summary string (legacy/edge case) ===
+          const resultStr: string = String(event.data.result_summary || '');
+          const parseValue = (key: string): string | null => {
+            const regex = new RegExp(`['"]${key}['"]:\\s*([^,}]+)`);
+            const match = resultStr.match(regex);
+            return match ? match[1].trim().replace(/^['"]|['"]$/g, '') : null;
+          };
+
+          totalCount = parseInt(parseValue('total_count') || '0');
+          passCount = parseInt(parseValue('pass_count') || '0');
+          failCount = parseInt(parseValue('fail_count') || '0');
+          skipCount = parseInt(parseValue('skip_count') || '0');
+          buildNumber = parseValue('build_number') || 'N/A';
+          duration = parseFloat(parseValue('duration') || '0');
         }
 
         // Only add if we got valid data
