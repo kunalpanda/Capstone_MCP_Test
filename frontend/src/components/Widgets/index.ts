@@ -6,3 +6,4 @@ export { CoverageWidget } from './CoverageWidget';
 export { RepositoryWidget } from './RepositoryWidget';
 export { RecentActionsWidget } from './RecentActionsWidget';
 export { EventStreamWidget } from './EventStreamWidget';
+export { ProductivityWidget } from './ProductivityWidget';
