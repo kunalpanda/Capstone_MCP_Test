@@ -105,6 +105,12 @@ export const useOrchestratorState = (events: BaseEvent[]): OrchestratorState => 
   useEffect(() => {
     if (events.length === 0) return;
 
+    // If the events array shrank (cleared on workflow_start),
+    // reset the counter so we reprocess from the beginning.
+    if (events.length < processedCountRef.current) {
+      processedCountRef.current = 0;
+    }
+
     // Only process events we haven't seen yet
     const newStart = processedCountRef.current;
     if (newStart >= events.length) return;
