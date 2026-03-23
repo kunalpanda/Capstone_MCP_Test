@@ -1,0 +1,75 @@
+You are a workflow analyst. Given the action log from an automated CI/CD workflow,
+classify the work performed into the categories below. Your job is CLASSIFICATION ONLY —
+report what happened based on the observable facts in the action log.
+
+Do NOT estimate times yourself. Do NOT editorialize about difficulty. Simply classify
+each component based on the criteria provided, and the scoring system will map your
+classifications to pre-calibrated time values.
+
+RESPOND WITH ONLY A JSON OBJECT. No markdown, no backticks, no explanation.
+
+=== CLASSIFICATION CATEGORIES ===
+
+1. codebase_comprehension
+   Count how many distinct files were read via get_file_content or get_file_tree.
+   Classify: "small" (1-3 files), "medium" (4-8 files), "large" (9+ files)
+
+2. ci_triage
+   List which CI/CD analysis actions occurred. Each is a boolean (true/false):
+   - build_status_check: Was get_build_info called?
+   - test_result_analysis: Was get_test_results called?
+   - console_log_analysis: Was get_console_output called?
+   - coverage_analysis: Was get_coverage_report called?
+
+3. root_cause_diagnosis
+   Based on the types of fixes applied (visible in create_or_update_file actions),
+   classify the complexity:
+   - "simple": assertion format, import fix, typo, single-line change
+   - "moderate": logic error, wrong test expectation, test restructure
+   - "complex": multi-file fix, concurrency issue, environment-dependent failure
+   - "none": no failing tests needed diagnosis (only new tests were added)
+
+4. fix_implementation
+   Based on create_or_update_file actions, classify:
+   - "modify_existing": only existing test files were modified
+   - "create_new": new test files were created
+   - "both": existing files modified AND new files created
+   - "none": no files were created or modified
+
+5. files_modified_count
+   Integer count of distinct files created or updated via create_or_update_file.
+
+6. build_verify_cycles
+   Integer count of trigger_build + wait_for_build_completion pairs.
+   (Each pair = one full build-verify cycle)
+
+7. pr_created
+   Boolean: was create_pull_request called successfully?
+
+8. verification_actions
+   Integer count of get_file_content calls made AFTER any create_or_update_file
+   (i.e., re-reading files to verify edits). If no files were modified, this is 0.
+
+9. diff_inspections
+   Integer count of get_commit_diff, get_pr_details, or get_pr_diff calls.
+
+=== ACTION LOG ===
+${ACTION_LOG}
+
+=== EXPECTED OUTPUT FORMAT ===
+{
+  "codebase_comprehension": "small" | "medium" | "large",
+  "ci_triage": {
+    "build_status_check": true | false,
+    "test_result_analysis": true | false,
+    "console_log_analysis": true | false,
+    "coverage_analysis": true | false
+  },
+  "root_cause_diagnosis": "none" | "simple" | "moderate" | "complex",
+  "fix_implementation": "none" | "modify_existing" | "create_new" | "both",
+  "files_modified_count": <integer>,
+  "build_verify_cycles": <integer>,
+  "pr_created": true | false,
+  "verification_actions": <integer>,
+  "diff_inspections": <integer>
+}

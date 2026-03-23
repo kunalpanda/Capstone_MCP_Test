@@ -25,6 +25,7 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: 'repository', title: 'Repository Info', visible: true, minWidth: 280 },
   { id: 'recent-actions', title: 'Recent Actions', visible: true, minWidth: 280 },
   { id: 'event-stream', title: 'Event Stream', visible: true, minWidth: 400 },
+  { id: 'productivity', title: 'Productivity Impact', visible: true, minWidth: 300 },
 ];
 
 const DEFAULT_LAYOUT: WidgetLayout = {

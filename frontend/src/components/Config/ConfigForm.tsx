@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Save, Loader2, Github, Wrench } from 'lucide-react';
+import { Eye, EyeOff, Save, Loader2, Github, Link2, User, KeyRound } from 'lucide-react';
 import './ConfigForm.css';
 
 const WEBHOOK_URL = 'https://webhook-handler-389127668230.us-central1.run.app';
@@ -17,10 +17,10 @@ interface FormFields {
 }
 
 const FIELDS = [
-  { key: 'github_token'  as const, label: 'GitHub Personal Access Token', placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',           isSecret: true,  icon: <Github size={16} />, hint: 'Needs repo and workflow scopes.' },
-  { key: 'jenkins_url'   as const, label: 'Jenkins URL',                   placeholder: 'https://jenkins.example.com',       isSecret: false, icon: <Wrench size={16} />, hint: 'Full URL including protocol. No trailing slash.' },
-  { key: 'jenkins_user'  as const, label: 'Jenkins Username',              placeholder: 'admin',                             isSecret: false, icon: <Wrench size={16} />, hint: 'The user whose API token is provided below.' },
-  { key: 'jenkins_token' as const, label: 'Jenkins API Token',             placeholder: '11xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', isSecret: true,  icon: <Wrench size={16} />, hint: 'Generate in Jenkins -> User -> Configure -> API Token.' },
+  { key: 'github_token'  as const, label: 'GitHub Personal Access Token', placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',           isSecret: true,  icon: <Github   size={16} />, hint: 'Needs repo and workflow scopes.' },
+  { key: 'jenkins_url'   as const, label: 'Jenkins URL',                   placeholder: 'https://jenkins.example.com',       isSecret: false, icon: <Link2    size={16} />, hint: 'Full URL including protocol. No trailing slash.' },
+  { key: 'jenkins_user'  as const, label: 'Jenkins Username',              placeholder: 'admin',                             isSecret: false, icon: <User     size={16} />, hint: 'The user whose API token is provided below.' },
+  { key: 'jenkins_token' as const, label: 'Jenkins API Token',             placeholder: '11xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', isSecret: true,  icon: <KeyRound size={16} />, hint: 'Generate in Jenkins -> User -> Configure -> API Token.' },
 ];
 
 export const ConfigForm: React.FC<ConfigFormProps> = ({ onSuccess, compact = false }) => {
@@ -60,34 +60,50 @@ export const ConfigForm: React.FC<ConfigFormProps> = ({ onSuccess, compact = fal
     }
   };
 
+  const renderField = ({ key, label, placeholder, isSecret, icon, hint }: typeof FIELDS[number]) => (
+    <div key={key} className="config-form__field">
+      <label className="config-form__label">
+        <span className="config-form__label-icon">{icon}</span>
+        {label}
+      </label>
+      <div className="config-form__input-wrap">
+        <input
+          className="config-form__input"
+          type={isSecret && !revealed[key] ? 'password' : 'text'}
+          placeholder={placeholder}
+          value={fields[key]}
+          onChange={e => handleChange(key, e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {isSecret && (
+          <button type="button" className="config-form__reveal" onClick={() => toggle(key)} title={revealed[key] ? 'Hide' : 'Show'}>
+            {revealed[key] ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        )}
+      </div>
+      <p className="config-form__hint">{hint}</p>
+    </div>
+  );
+
   return (
     <div className={`config-form ${compact ? 'config-form--compact' : ''}`}>
-      <div className="config-form__fields">
-        {FIELDS.map(({ key, label, placeholder, isSecret, icon, hint }) => (
-          <div key={key} className="config-form__field">
-            <label className="config-form__label">
-              <span className="config-form__label-icon">{icon}</span>
-              {label}
-            </label>
-            <div className="config-form__input-wrap">
-              <input
-                className="config-form__input"
-                type={isSecret && !revealed[key] ? 'password' : 'text'}
-                placeholder={placeholder}
-                value={fields[key]}
-                onChange={e => handleChange(key, e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {isSecret && (
-                <button type="button" className="config-form__reveal" onClick={() => toggle(key)} title={revealed[key] ? 'Hide' : 'Show'}>
-                  {revealed[key] ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              )}
-            </div>
-            <p className="config-form__hint">{hint}</p>
-          </div>
-        ))}
+      {/* GitHub section */}
+      <div className="config-form__section">
+        <div className="config-form__section-label">GitHub</div>
+        <div className="config-form__fields">
+          {renderField(FIELDS[0])}
+        </div>
+      </div>
+
+      {/* Jenkins section */}
+      <div className="config-form__section">
+        <div className="config-form__section-label">Jenkins</div>
+        <div className="config-form__fields">
+          {renderField(FIELDS[1])}
+          {renderField(FIELDS[2])}
+          {renderField(FIELDS[3])}
+        </div>
       </div>
 
       {error && <div className="config-form__error" role="alert">{error}</div>}

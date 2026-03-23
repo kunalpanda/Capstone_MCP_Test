@@ -18,6 +18,12 @@ export const useWebSocket = (url?: string) => {
     
     // Subscribe to events
     const unsubscribe = ws.subscribe((event) => {
+      // Clear stale events when a new workflow begins so
+      // Logs, Table, and other views start with a clean slate.
+      if (event.type === 'workflow_start') {
+        setEvents([event]);
+        return;
+      }
       setEvents(prev => [...prev, event]);
     });
     

@@ -84,3 +84,7 @@ class EventEmitter:
     # PR events
     async def emit_pr_summary(self, **kwargs):
         await self._publish('pr_summary', kwargs)
+
+    # Productivity events
+    async def emit_productivity_analysis(self, **kwargs):
+        await self._publish('productivity_analysis', kwargs)
