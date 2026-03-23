@@ -111,50 +111,280 @@ async def call_claude(messages: list, tools: list = None, system: str = None, ma
             # Otherwise continue to next retry attempt
 
 
-# Increased from 3
-async def summarize_old_messages(messages: list, keep_recent: int = 6) -> list:
-    """Keep more recent context and include tool results in summary"""
+# ======================================
+# Action Log — Records tool calls and key
+# results incrementally during the workflow
+# ======================================
+
+class WorkflowActionLog:
+    """
+    Append-only log of every tool call and its outcome.
+
+    Built incrementally as the orchestration loop runs — never
+    reconstructed from message history.  The log is consumed by
+    compress_message_history() to produce a rich summary that
+    replaces old messages.
+    """
+
+    def __init__(self):
+        self.entries: list[dict] = []
+
+    def record(self, iteration: int, tool_name: str, tool_input: dict, result: dict, success: bool):
+        """
+        Record a single tool call and its outcome.
+
+        Only the fields Claude needs for continuity are kept —
+        full payloads stay in the raw messages.
+        """
+        entry = {
+            "iteration": iteration,
+            "tool": tool_name,
+            "success": success,
+        }
+
+        # ----- Extract the fields that matter for continuity -----
+
+        if tool_name == "create_branch":
+            entry["detail"] = f"Created branch '{result.get('branch_name', '?')}' from '{result.get('from_branch', 'main')}'"
+
+        elif tool_name == "create_or_update_file":
+            entry["detail"] = f"{result.get('operation', 'modified').capitalize()} file: {tool_input.get('path', '?')} on branch '{result.get('branch', '?')}'"
+
+        elif tool_name == "trigger_build":
+            branch_param = (tool_input.get("parameters") or {}).get("BRANCH", "?")
+            build_num = result.get("build_number", "?")
+            entry["detail"] = f"Triggered build #{build_num} for branch '{branch_param}'"
+
+        elif tool_name == "wait_for_build_completion":
+            entry["detail"] = f"Build #{result.get('build_number', '?')} finished: {result.get('result', '?')}"
+
+        elif tool_name == "get_test_results":
+            total = result.get("total_count", 0)
+            fail = result.get("fail_count", 0)
+            passed = result.get("pass_count", 0)
+            entry["detail"] = f"Tests: {passed} passed, {fail} failed, {total} total"
+            if fail > 0:
+                names = [t.get("name", "?") for t in result.get("failed_tests", [])[:5]]
+                entry["detail"] += f" — failures: {', '.join(names)}"
+
+        elif tool_name == "get_coverage_report":
+            if result.get("coverage_available"):
+                cov = result.get("coverage", {})
+                entry["detail"] = f"Coverage: line={cov.get('line', '?')}%, branch={cov.get('branch', '?')}%, method={cov.get('method', '?')}%"
+            else:
+                entry["detail"] = "Coverage not available"
+
+        elif tool_name == "get_file_content":
+            entry["detail"] = f"Read file: {tool_input.get('path', '?')} (ref={tool_input.get('ref', 'main')})"
+
+        elif tool_name == "get_file_tree":
+            count = result.get("count", 0)
+            entry["detail"] = f"Listed file tree: {count} files (ref={tool_input.get('ref', 'main')})"
+
+        elif tool_name == "get_console_output":
+            entry["detail"] = f"Retrieved console log for build #{tool_input.get('build_number', '?')} ({result.get('total_length', 0):,} chars)"
+
+        elif tool_name == "create_pull_request":
+            entry["detail"] = f"Created PR #{result.get('number', '?')}: {result.get('title', '?')}"
+
+        elif tool_name == "get_repo_info":
+            entry["detail"] = f"Retrieved repo info for {tool_input.get('owner', '?')}/{tool_input.get('repo', '?')}"
+
+        elif tool_name == "get_build_info":
+            entry["detail"] = f"Build #{result.get('build_number', '?')} status: {result.get('status', '?')}"
+
+        else:
+            # Generic fallback — tool name + truncated input summary
+            input_preview = str(tool_input)[:80]
+            entry["detail"] = f"{tool_name}({input_preview})"
+
+        if not success:
+            error_msg = str(result.get("error", "unknown error"))[:120]
+            entry["detail"] = f"FAILED: {tool_name} — {error_msg}"
+
+        self.entries.append(entry)
+
+    def format_summary(self, up_to_iteration: int = None) -> str:
+        """
+        Format all recorded actions as a concise, numbered summary.
+
+        If up_to_iteration is provided, only include entries up to (but not
+        including) that iteration — entries from recent messages that are
+        kept verbatim don't need to be duplicated in the summary.
+        """
+        if not self.entries:
+            return "No actions recorded yet."
+
+        lines = []
+        for e in self.entries:
+            if up_to_iteration is not None and e["iteration"] >= up_to_iteration:
+                break
+            status = "✓" if e["success"] else "✗"
+            lines.append(f"  [{status}] Iter {e['iteration']}: {e['detail']}")
+
+        if not lines:
+            return "No actions to summarize (all are in recent context)."
+
+        return "\n".join(lines)
+
+
+# ======================================
+# Token estimation and message compression
+# ======================================
+
+def _estimate_tokens(messages: list) -> int:
+    """
+    Rough token estimate for a message list.
+
+    Uses the heuristic of ~4 characters per token for English text.
+    This doesn't need to be exact — it's used to decide when compression
+    is needed, not to count billing tokens.
+    """
+    total_chars = 0
+    for msg in messages:
+        content = msg.get("content", "")
+        if isinstance(content, str):
+            total_chars += len(content)
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    if block.get("type") == "text":
+                        total_chars += len(block.get("text", ""))
+                    elif block.get("type") == "tool_use":
+                        total_chars += len(json.dumps(block.get("input", {})))
+                    elif block.get("type") == "tool_result":
+                        total_chars += len(str(block.get("content", "")))
+                elif isinstance(block, str):
+                    total_chars += len(block)
+    return total_chars // 4
+
+
+def compress_message_history(
+    messages: list,
+    action_log: WorkflowActionLog,
+    workflow_state: WorkflowState,
+    keep_recent: int = 8,
+    token_ceiling: int = 60000
+) -> list:
+    """
+    Replace old messages with a structured state summary while keeping
+    recent messages verbatim.
+
+    This replaces the old summarize_old_messages() function.  Key differences:
+
+    1. Uses the action log (built incrementally) instead of trying to parse
+       raw JSON strings from old tool results.
+    2. Injects the current WorkflowState (branch, coverage, PR, etc.) so
+       Claude never loses track of where it is.
+    3. Estimates token count and only compresses when approaching the
+       context ceiling — short conversations are left untouched.
+    4. Keeps `keep_recent` raw messages (not "exchanges"), which correctly
+       handles the user/assistant/tool_result triplet structure.
+
+    Args:
+        messages: Full message list
+        action_log: Incrementally-built log of all tool actions
+        workflow_state: Current WorkflowState object
+        keep_recent: Number of most-recent raw messages to keep verbatim
+        token_ceiling: Estimated token count that triggers compression
+
+    Returns:
+        Compressed message list (or original if compression not needed)
+    """
+    # --- Guard: don't compress tiny conversations ---
     if len(messages) <= keep_recent + 2:
         return messages
 
-    # Keep initial message + last 6 exchanges (12 messages)
+    # --- Guard: don't compress if we're well under the token ceiling ---
+    estimated_tokens = _estimate_tokens(messages)
+    if estimated_tokens < token_ceiling:
+        return messages
+
+    print(f"📦 Compressing message history: ~{estimated_tokens:,} tokens estimated, "
+          f"{len(messages)} messages → keeping last {keep_recent}")
+
+    # --- Preserve the initial prompt (messages[0]) ---
     initial_message = messages[0]
-    old_messages = messages[1:-(keep_recent * 2)]
-    recent_messages = messages[-(keep_recent * 2):]
 
-    # Create DETAILED summary including tool results
-    summary_parts = []
-    current_branch = None
-    files_modified = []
+    # --- Keep the most recent messages verbatim ---
+    recent_messages = messages[-keep_recent:]
 
-    for msg in old_messages:
-        content = msg["content"]
-
-        # Extract key information
+    # --- Figure out which iteration the recent messages start at ---
+    # This avoids duplicating action log entries that are already in
+    # the verbatim recent messages.
+    recent_start_iteration = None
+    for msg in recent_messages:
+        content = msg.get("content", "")
         if isinstance(content, list):
             for block in content:
-                if isinstance(block, dict):
-                    if block.get("type") == "tool_result":
-                        result_content = block.get("content", "")
-                        # Parse for branch names, file paths
-                        if "branch_name" in result_content:
-                            # Extract branch
-                            pass
-                        if "path" in result_content and "operation" in result_content:
-                            # Track files modified
-                            pass
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    # This is a Claude response requesting a tool — we can't
+                    # directly get the iteration from here, so we'll use the
+                    # action log's last entry before the cutoff
+                    pass
+        # For tool_result messages, the tool_use_id doesn't directly encode
+        # the iteration.  Instead, we'll use message count math.
+
+    # Simpler approach: figure out which iteration corresponds to the
+    # boundary.  The action log entries have iteration numbers, and we
+    # know how many messages we're keeping.  The summarized actions are
+    # everything BEFORE the kept messages.
+    old_message_count = len(messages) - keep_recent - 1  # minus initial prompt
+    # Each full tool-use cycle is 2 messages (assistant + user with tool_result).
+    # Estimate the iteration boundary from the log.
+    summarized_entry_count = max(0, len(action_log.entries) - (keep_recent // 2))
+
+    # --- Build the files-modified list from the action log ---
+    files_modified = []
+    for entry in action_log.entries:
+        if entry["tool"] == "create_or_update_file" and entry["success"]:
+            # Extract path from the detail string
+            detail = entry.get("detail", "")
+            if "file:" in detail:
+                path_part = detail.split("file:")[1].split(" on branch")[0].strip()
+                if path_part and path_part not in files_modified:
+                    files_modified.append(path_part)
+
+    # --- Build the builds list from the action log ---
+    builds_triggered = []
+    for entry in action_log.entries:
+        if entry["tool"] == "wait_for_build_completion" and entry["success"]:
+            builds_triggered.append(entry.get("detail", ""))
+
+    # --- Build the summary ---
+    branch_info = workflow_state.get_branch()
+    coverage_summary = workflow_state.get_coverage_summary()
+    action_summary = action_log.format_summary(up_to_iteration=None)
+
+    summary_text = f"""[WORKFLOW CONTEXT — AUTO-GENERATED SUMMARY OF PREVIOUS ACTIONS]
+
+CURRENT STATE:
+  Active Branch: {branch_info}
+  PR Created: {'#' + str(workflow_state.pr_number) if workflow_state.pr_number else 'Not yet'}
+  Phase: {workflow_state.phase}
+
+FILES MODIFIED IN THIS WORKFLOW:
+  {chr(10).join('  • ' + f for f in files_modified) if files_modified else '  None yet'}
+
+{coverage_summary}
+
+COMPLETE ACTION HISTORY ({len(action_log.entries)} actions):
+{action_summary}
+
+[END OF SUMMARY — The {keep_recent} most recent messages follow in full detail.]"""
 
     summary_message = {
         "role": "user",
-        "content": f"""[WORKFLOW STATE SUMMARY]
-        Current Branch: {current_branch or "unknown"}
-        Files Modified: {", ".join(files_modified) if files_modified else "none"}
-        Previous Actions: {len(old_messages)} steps completed
-        Key Results: {"\n".join(summary_parts[:15])}
-        """
+        "content": summary_text
     }
 
-    return [initial_message, summary_message] + recent_messages
+    compressed = [initial_message, summary_message] + recent_messages
+
+    new_token_estimate = _estimate_tokens(compressed)
+    print(f"📦 Compressed: {len(messages)} → {len(compressed)} messages, "
+          f"~{estimated_tokens:,} → ~{new_token_estimate:,} tokens")
+
+    return compressed
 
 
 def truncate_tool_results(messages: list, max_result_length: int = 55000) -> list:
@@ -282,6 +512,193 @@ def enforce_branch(params: dict) -> dict:
         params["parameters"].setdefault("BRANCH", active)
 
     return params
+
+
+def _ensure_unique_branch_name(tool_input: dict) -> dict:
+    """
+    Append a seconds-precision timestamp suffix to the branch name
+    in a create_branch tool call.  This guarantees uniqueness even if
+    Claude requests a name that already exists on the remote.
+
+    Example:
+        fix-tests-20250319  →  fix-tests-20250319-142635
+
+    The suffix is only added once (at creation time).  All subsequent
+    references to the branch go through enforce_branch(), which reads
+    from state.get_branch() — so they automatically pick up the real
+    (suffixed) name after state.branch is updated from the MCP result.
+    """
+    from datetime import datetime, timezone
+
+    original_name = tool_input.get("branch_name", "")
+    if not original_name:
+        return tool_input
+
+    suffix = datetime.now(timezone.utc).strftime("%H%M%S")
+    unique_name = f"{original_name}-{suffix}"
+
+    tool_input["branch_name"] = unique_name
+    print(f"🔖 Branch name uniquified: '{original_name}' → '{unique_name}'")
+
+    return tool_input
+
+
+# ======================================
+# Post-Workflow Productivity Analysis
+# ======================================
+
+# Pre-calibrated time values (minutes) — these are NOT generated by the LLM.
+# See prompts/productivity_rubric_research.md for research backing each value.
+PRODUCTIVITY_TIME_MAP = {
+    "codebase_comprehension": {"small": 15, "medium": 30, "large": 45},
+    "ci_triage": {
+        "build_status_check": 10,
+        "test_result_analysis": 20,
+        "console_log_analysis": 30,
+        "coverage_analysis": 15,
+    },
+    "root_cause_diagnosis": {"none": 0, "simple": 20, "moderate": 60, "complex": 120},
+    "fix_implementation": {"none": 0, "modify_existing": 30, "create_new": 60, "both": 75},
+    "build_verify_cycle": 30,       # per cycle
+    "pr_created": 20,               # flat
+    "verification_per_file": 5,      # per file re-read
+    "diff_inspection": 10,           # per diff check
+}
+
+DEFAULT_HOURLY_RATE = 75  # USD, fully loaded
+
+PRODUCTIVITY_PROMPT_FILE = "prompts/productivity_analysis_prompt.txt"
+
+
+async def analyze_workflow_productivity(
+    action_log: WorkflowActionLog,
+    workflow_duration_seconds: float,
+    iteration_count: int
+) -> dict:
+    """
+    Run a separate, lightweight Claude call to classify the work performed
+    in the workflow, then map those classifications to pre-calibrated time
+    values. Returns a structured productivity analysis dict.
+
+    The LLM only classifies — it does NOT estimate times.
+    Time values come from PRODUCTIVITY_TIME_MAP (research-backed constants).
+    """
+    try:
+        # Load the classification prompt
+        prompt_template = open(PRODUCTIVITY_PROMPT_FILE, "r", encoding="utf-8").read()
+        action_summary = action_log.format_summary()
+        prompt = prompt_template.replace("${ACTION_LOG}", action_summary)
+
+        print(f"\n{'='*60}")
+        print("📊 RUNNING PRODUCTIVITY ANALYSIS")
+        print(f"{'='*60}")
+
+        # Single lightweight API call — no tools, just classification
+        response = await call_claude(
+            messages=[{"role": "user", "content": prompt}],
+            system="You are a workflow analyst. Respond with ONLY valid JSON. No markdown, no backticks, no explanation.",
+            max_retries=2
+        )
+
+        # Extract text content from response
+        raw_text = ""
+        for block in response.get("content", []):
+            if block.get("type") == "text":
+                raw_text = block.get("text", "")
+                break
+
+        # Parse JSON — strip any accidental markdown fences
+        clean = raw_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        classification = json.loads(clean)
+
+        print(f"✅ Classification received: {json.dumps(classification, indent=2)}")
+
+        # === Map classifications to pre-set time values ===
+        breakdown = {}
+        total_minutes = 0
+
+        # 1. Codebase comprehension
+        comp_level = classification.get("codebase_comprehension", "small")
+        comp_min = PRODUCTIVITY_TIME_MAP["codebase_comprehension"].get(comp_level, 15)
+        breakdown["codebase_comprehension"] = {"classification": comp_level, "minutes": comp_min}
+        total_minutes += comp_min
+
+        # 2. CI/CD triage
+        ci_triage = classification.get("ci_triage", {})
+        ci_minutes = 0
+        ci_detail = {}
+        for check, time_val in PRODUCTIVITY_TIME_MAP["ci_triage"].items():
+            if ci_triage.get(check, False):
+                ci_detail[check] = time_val
+                ci_minutes += time_val
+        breakdown["ci_triage"] = {"components": ci_detail, "minutes": ci_minutes}
+        total_minutes += ci_minutes
+
+        # 3. Root cause diagnosis
+        diag_level = classification.get("root_cause_diagnosis", "none")
+        diag_min = PRODUCTIVITY_TIME_MAP["root_cause_diagnosis"].get(diag_level, 0)
+        breakdown["root_cause_diagnosis"] = {"classification": diag_level, "minutes": diag_min}
+        total_minutes += diag_min
+
+        # 4. Fix implementation
+        fix_level = classification.get("fix_implementation", "none")
+        fix_min = PRODUCTIVITY_TIME_MAP["fix_implementation"].get(fix_level, 0)
+        breakdown["fix_implementation"] = {"classification": fix_level, "minutes": fix_min}
+        total_minutes += fix_min
+
+        # 5. Build-verify cycles
+        cycles = classification.get("build_verify_cycles", 0)
+        cycle_min = cycles * PRODUCTIVITY_TIME_MAP["build_verify_cycle"]
+        breakdown["build_verify_cycles"] = {"count": cycles, "minutes": cycle_min}
+        total_minutes += cycle_min
+
+        # 6. PR creation
+        pr_created = classification.get("pr_created", False)
+        pr_min = PRODUCTIVITY_TIME_MAP["pr_created"] if pr_created else 0
+        breakdown["pr_creation"] = {"created": pr_created, "minutes": pr_min}
+        total_minutes += pr_min
+
+        # 7. Change verification
+        verif_count = classification.get("verification_actions", 0)
+        verif_min = verif_count * PRODUCTIVITY_TIME_MAP["verification_per_file"]
+        breakdown["change_verification"] = {"files_verified": verif_count, "minutes": verif_min}
+        total_minutes += verif_min
+
+        # 8. Diff inspections
+        diff_count = classification.get("diff_inspections", 0)
+        diff_min = diff_count * PRODUCTIVITY_TIME_MAP["diff_inspection"]
+        breakdown["diff_inspections"] = {"count": diff_count, "minutes": diff_min}
+        total_minutes += diff_min
+
+        # Compute cost savings
+        total_hours = round(total_minutes / 60, 2)
+        cost_saved = round(total_hours * DEFAULT_HOURLY_RATE, 2)
+        ai_minutes = round(workflow_duration_seconds / 60, 1)
+
+        result = {
+            "breakdown": breakdown,
+            "total_manual_minutes": total_minutes,
+            "total_manual_hours": total_hours,
+            "ai_resolution_minutes": ai_minutes,
+            "time_saved_minutes": round(total_minutes - ai_minutes, 1),
+            "hourly_rate": DEFAULT_HOURLY_RATE,
+            "cost_saved": cost_saved,
+            "iteration_count": iteration_count,
+            "files_modified": classification.get("files_modified_count", 0),
+        }
+
+        print(f"\n📊 PRODUCTIVITY ANALYSIS RESULTS")
+        print(f"   Manual estimate: {total_hours} hrs ({total_minutes} min)")
+        print(f"   AI resolution:   {ai_minutes} min")
+        print(f"   Time saved:      {result['time_saved_minutes']} min")
+        print(f"   Cost saved:      ${cost_saved}")
+        print(f"{'='*60}\n")
+
+        return result
+
+    except Exception as e:
+        print(f"⚠️  Productivity analysis failed (non-fatal): {e}")
+        return None
 
 
 async def fetch_pr_summary_if_exists(repo_owner: str, repo_name: str, branch: str):
@@ -671,6 +1088,13 @@ async def run_conversation_with_tools(
         }
     ]
 
+    # Initialize the action log for context compression
+    action_log = WorkflowActionLog()
+
+    # Track workflow wall-clock time for productivity analysis
+    import time as _time
+    _workflow_start_time = _time.time()
+
     system_prompt = (
         "You are an autonomous agent for software test analysis and improvement.\n\n"
         "AVAILABLE TOOLS - use ONLY these exact names:\n"
@@ -684,6 +1108,10 @@ async def run_conversation_with_tools(
         "- Before triggering builds, confirm the branch name\n"
         "- If tests fail repeatedly, read back your changes to debug\n"
         "- Document your current state in each response\n\n"
+        "CONTEXT WINDOW NOTE:\n"
+        "- Older messages may be replaced with a [WORKFLOW CONTEXT] summary.\n"
+        "- If you see this summary, trust it — it was built from the actual tool results.\n"
+        "- Your most recent messages are always kept in full.\n\n"
         "Use the provided tools to explore repositories and analyze CI/CD pipelines. "
         "Be concise but track state carefully."
     )
@@ -751,12 +1179,14 @@ async def run_conversation_with_tools(
         # Truncate large tool results BEFORE sending
         messages = truncate_tool_results(messages)
 
-        # Summarize old messages if conversation is getting long
-        if len(messages) > 10:
-            print(
-                f"📊 Message count: {len(messages)} - Summarizing old messages...")
-            messages = await summarize_old_messages(messages, keep_recent=3)
-            print(f"📊 After summarization: {len(messages)} messages")
+        # Compress old messages if context is getting large
+        messages = compress_message_history(
+            messages,
+            action_log=action_log,
+            workflow_state=state,
+            keep_recent=8,
+            token_ceiling=60000
+        )
 
         # Call Claude with retry logic
         print(f"🤖 Calling Claude (iteration {iteration})...")
@@ -835,6 +1265,11 @@ async def run_conversation_with_tools(
                         # Call the MCP server
                         # Choose headers based on which MCP server is being called
                         _headers = github_headers if server_url == settings.GITHUB_MCP_URL else jenkins_headers
+
+                        # Ensure unique branch names to prevent collision errors
+                        if tool_name == "create_branch":
+                            tool_input = _ensure_unique_branch_name(tool_input)
+
                         mcp_response = await call_mcp_tool(
                             server_url=server_url,
                             method="tools/call",
@@ -900,6 +1335,15 @@ async def run_conversation_with_tools(
 
                             result_str = json.dumps(result)
 
+                            # === Record to action log for context compression ===
+                            action_log.record(
+                                iteration=iteration,
+                                tool_name=tool_name,
+                                tool_input=tool_input,
+                                result=result,
+                                success=True
+                            )
+
                             # Log truncated result
                             if len(result_str) > 300:
                                 print(
@@ -918,6 +1362,15 @@ async def run_conversation_with_tools(
                         elif "error" in mcp_response:
                             result = {"error": mcp_response["error"]}
                             print(f"❌ Error: {result}")
+
+                            # === Record failure to action log ===
+                            action_log.record(
+                                iteration=iteration,
+                                tool_name=tool_name,
+                                tool_input=tool_input,
+                                result=result,
+                                success=False
+                            )
 
                             await emitter.emit_tool_result(
                                 iteration=iteration,
@@ -940,6 +1393,16 @@ async def run_conversation_with_tools(
 
                     except Exception as e:
                         print(f"❌ Tool execution failed: {e}")
+
+                        # === Record exception to action log ===
+                        action_log.record(
+                            iteration=iteration,
+                            tool_name=tool_name,
+                            tool_input=tool_input,
+                            result={"error": str(e)},
+                            success=False
+                        )
+
                         tool_results.append({
                             "type": "tool_result",
                             "tool_use_id": tool_use_id,
@@ -967,6 +1430,7 @@ async def run_conversation_with_tools(
     print(f"\n{'='*60}")
     print(f"Completed after {iteration} iterations")
     print(f"📊 Final message count: {len(messages)}")
+    print(f"📋 Total actions logged: {len(action_log.entries)}")
     print(f"{'='*60}")
 
     if state.pr_number:
@@ -976,6 +1440,16 @@ async def run_conversation_with_tools(
             branch=state.get_branch()
         )
         state.pr_summary = pr_summary
+
+    # === Productivity analysis (separate lightweight Claude call) ===
+    workflow_duration = _time.time() - _workflow_start_time
+    productivity = await analyze_workflow_productivity(
+        action_log=action_log,
+        workflow_duration_seconds=workflow_duration,
+        iteration_count=iteration
+    )
+    if productivity:
+        await emitter.emit_productivity_analysis(**productivity)
 
     await emitter.emit_workflow_complete(
         total_iterations=iteration,

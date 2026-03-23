@@ -23,8 +23,24 @@ export class WebSocketService {
         
         this.ws.onmessage = (message) => {
           try {
-            const event: BaseEvent = JSON.parse(message.data);
-            this.notifyListeners(event);
+            const parsed = JSON.parse(message.data);
+
+            // The event gateway sends a history wrapper on connect:
+            //   { type: "history", events: [...] }
+            // Unpack and replay each event individually.
+            if (parsed.type === 'history' && Array.isArray(parsed.events)) {
+              console.log(`📜 Replaying ${parsed.events.length} historical events`);
+              for (const event of parsed.events) {
+                this.notifyListeners(event as BaseEvent);
+              }
+              return;
+            }
+
+            // Skip echo messages (server keepalive acks)
+            if (parsed.type === 'echo') return;
+
+            // Normal real-time event
+            this.notifyListeners(parsed as BaseEvent);
           } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
           }

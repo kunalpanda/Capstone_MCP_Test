@@ -1,7 +1,7 @@
 // src/components/Layout/Header.tsx
 // Professional header with status indicators, progress, and controls
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Wifi,
   WifiOff,
@@ -26,6 +26,7 @@ interface HeaderProps {
   theme: Theme;
   onThemeToggle: () => void;
   onEditConfig: () => void;
+  workflowStartTime: number | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,10 +34,12 @@ export const Header: React.FC<HeaderProps> = ({
   isConnected,
   theme,
   onThemeToggle,
-  onEditConfig
+  onEditConfig,
+  workflowStartTime
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [stopping, setStopping] = useState(false);
+  const frozenTimeRef = useRef<number | null>(null);
 
   const handleEmergencyStop = async () => {
   if (!window.confirm(
@@ -77,25 +80,37 @@ export const Header: React.FC<HeaderProps> = ({
   }
 };
 
-  // Timer for running workflows
+  // Timer — synchronized with WorkflowStatusWidget via shared workflowStartTime.
+  // Uses the same frozen-ref pattern to prevent drift on tab switches.
   useEffect(() => {
-    if (state.status !== 'running') {
+    if (!workflowStartTime) {
+      setElapsedTime(0);
+      frozenTimeRef.current = null;
       return;
     }
 
+    if (state.status === 'running') {
+      frozenTimeRef.current = null;
+    }
+
+    if (state.status !== 'running' && frozenTimeRef.current === null) {
+      frozenTimeRef.current = Math.floor((Date.now() - workflowStartTime) / 1000);
+    }
+
+    if (frozenTimeRef.current !== null) {
+      setElapsedTime(frozenTimeRef.current);
+      return;
+    }
+
+    const calculateElapsed = () => Math.floor((Date.now() - workflowStartTime) / 1000);
+    setElapsedTime(calculateElapsed());
+
     const interval = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
+      setElapsedTime(calculateElapsed());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [state.status]);
-
-  // Reset timer when workflow starts
-  useEffect(() => {
-    if (state.status === 'running' && state.currentIteration === 1) {
-      setElapsedTime(0);
-    }
-  }, [state.status, state.currentIteration]);
+  }, [workflowStartTime, state.status]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -103,9 +118,15 @@ export const Header: React.FC<HeaderProps> = ({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const progressPercent = state.maxIterations > 0
-    ? (state.currentIteration / state.maxIterations) * 100
-    : 0;
+  // Remaining interactions for header pill
+  const remaining = Math.max(state.maxInteractions - state.currentInteraction, 0);
+  const remainingPercent = state.maxInteractions > 0 ? remaining / state.maxInteractions : 1;
+
+  const getRemainingColor = () => {
+    if (remainingPercent > 0.5) return 'header__remaining--ok';
+    if (remainingPercent > 0.2) return 'header__remaining--warn';
+    return 'header__remaining--critical';
+  };
 
   const getStatusConfig = () => {
     switch (state.status) {
@@ -185,26 +206,16 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Center section - Progress */}
+        {/* Center section - Remaining interactions pill (large screens only) */}
         <div className="header__center">
           {state.status === 'running' && (
-            <div className="header__progress-container">
-              <div className="header__progress-info">
-                <Activity size={14} />
-                <span>Iteration</span>
-                <span className="header__progress-count">
-                  {state.currentIteration} / {state.maxIterations}
-                </span>
-              </div>
-              <div className="header__progress-bar">
-                <div
-                  className="header__progress-fill"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <span className="header__progress-percent">
-                {progressPercent.toFixed(0)}%
+            <div className={`header__remaining ${getRemainingColor()}`}>
+              <Activity size={14} />
+              <span className="header__remaining-count">{remaining}</span>
+              <span className="header__remaining-label">
+                of {state.maxInteractions} remaining
               </span>
+              <span className="header__remaining-dot" />
             </div>
           )}
         </div>
