@@ -16,21 +16,13 @@ from typing import Set, Dict, Any, List
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import pubsub_v1, firestore
+from contextlib import asynccontextmanager
 import uvicorn
 import threading
 
-app = FastAPI(title="Event Gateway")
-
-# CORS configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# ======================================
 # Configuration
+# ======================================
 PROJECT_ID = os.getenv('PROJECT_ID', 'capstone-cicd-ai')
 EVENTS_TOPIC = os.getenv('PUBSUB_TOPIC_EVENTS', 'workflow-events')
 EVENTS_SUBSCRIPTION = os.getenv(
@@ -55,9 +47,14 @@ subscription_path = subscriber.subscription_path(
     PROJECT_ID, EVENTS_SUBSCRIPTION)
 firestore_client = firestore.Client(project=PROJECT_ID)
 
-# Active WebSocket connections
-active_connections: Set[WebSocket] = set()
+# Reference to the main asyncio event loop — set during startup,
+# used by the Pub/Sub background thread to schedule coroutines safely.
+_main_loop: asyncio.AbstractEventLoop = None
 
+
+# ======================================
+# Event Gateway
+# ======================================
 
 class EventGateway:
     """Manages WebSocket connections and event broadcasting."""
@@ -182,43 +179,71 @@ class EventGateway:
 gateway = EventGateway()
 
 
+# ======================================
+# Pub/Sub Callback (runs in background thread)
+# ======================================
+
 def pubsub_callback(message):
     """
     Callback for Pub/Sub messages.
 
     Persists event to Firestore and broadcasts to WebSocket clients.
+
+    IMPORTANT: This runs in a Pub/Sub background thread, NOT on the
+    main asyncio event loop. We use asyncio.run_coroutine_threadsafe()
+    to safely schedule async work (Firestore save + WebSocket broadcast)
+    on the main loop where the WebSocket connections live.
     """
+    global _main_loop
+
     try:
         # Parse event data
         event_data = json.loads(message.data.decode('utf-8'))
-
         print(f"📥 Received event: {event_data.get('type', 'unknown')}")
 
-        # Save to Firestore (synchronously for simplicity)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        try:
-            # Save event
-            event_id = loop.run_until_complete(
-                gateway.save_event_to_firestore(event_data)
-            )
-
-            # Broadcast to connected clients
-            loop.run_until_complete(
-                gateway.broadcast(event_data)
-            )
-
-            # Acknowledge message
+        if _main_loop is None or _main_loop.is_closed():
+            print("⚠️  Main event loop not available — saving to Firestore only")
+            # Fallback: save synchronously without broadcast
+            try:
+                if 'timestamp' not in event_data:
+                    event_data['timestamp'] = datetime.utcnow().isoformat()
+                doc_ref = firestore_client.collection('events').document()
+                doc_ref.set(event_data)
+                print(f"💾 Saved event to Firestore (fallback): {doc_ref.id}")
+            except Exception as e:
+                print(f"❌ Fallback Firestore save failed: {e}")
             message.ack()
-            print(f"✅ Event processed: {event_id}")
+            return
 
-        finally:
-            loop.close()
+        # Schedule the async save + broadcast on the MAIN event loop.
+        # This avoids the "bound to a different event loop" error.
+        future = asyncio.run_coroutine_threadsafe(
+            _process_event(event_data), _main_loop
+        )
+
+        # Wait for completion (with timeout) so we can ack/nack properly
+        future.result(timeout=30)
+
+        message.ack()
 
     except Exception as e:
         print(f"❌ Error processing event: {e}")
         message.nack()
+
+
+async def _process_event(event_data: Dict[str, Any]):
+    """
+    Save event to Firestore and broadcast to WebSocket clients.
+
+    Runs on the main asyncio event loop (scheduled by pubsub_callback).
+    """
+    try:
+        event_id = await gateway.save_event_to_firestore(event_data)
+        await gateway.broadcast(event_data)
+        print(f"✅ Event processed: {event_id}")
+    except Exception as e:
+        print(f"❌ Error in _process_event: {e}")
+        raise
 
 
 def start_pubsub_subscriber():
@@ -250,26 +275,46 @@ def start_pubsub_subscriber():
         print(f"❌ Subscriber error: {e}")
 
 
-# Start subscriber thread
-subscriber_thread = None
+# ======================================
+# Lifespan (replaces deprecated @app.on_event)
+# ======================================
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage startup and shutdown."""
+    global _main_loop
 
-@app.on_event("startup")
-async def startup_event():
-    """Start Pub/Sub subscriber when app starts."""
-    global subscriber_thread
+    # Capture the main event loop BEFORE starting the subscriber thread.
+    _main_loop = asyncio.get_running_loop()
+    print(f"🔄 Main event loop captured: {_main_loop}")
 
+    # Start Pub/Sub subscriber in a daemon thread
     subscriber_thread = threading.Thread(
         target=start_pubsub_subscriber, daemon=True)
     subscriber_thread.start()
-
     print("🚀 Background event subscriber started")
 
+    yield  # App runs here
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
+    # Shutdown
     print("🛑 Shutting down...")
+    _main_loop = None
+
+
+# ======================================
+# FastAPI App
+# ======================================
+
+app = FastAPI(title="Event Gateway", lifespan=lifespan)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.websocket("/ws")
@@ -329,7 +374,7 @@ def root():
     """Root endpoint with service info."""
     return {
         "service": "Event Gateway",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "description": "Real-time event broadcasting with Firestore persistence",
         "websocket": "/ws",
         "endpoints": {
