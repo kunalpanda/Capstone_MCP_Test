@@ -3,7 +3,6 @@ import os
 import json
 import base64
 import traceback
-import asyncio
 from fastapi import FastAPI, Request, HTTPException
 from google.cloud import firestore
 import sys
@@ -188,27 +187,30 @@ async def pubsub_push_handler(request: Request):
     """
     Handle Pub/Sub push messages.
 
-    Returns HTTP 200 IMMEDIATELY to acknowledge the message, then runs
-    the workflow as a background task. This prevents Pub/Sub from
-    redelivering the message while the workflow is still running.
+    Runs the workflow SYNCHRONOUSLY (blocking) to keep the Cloud Run
+    instance alive for the duration of the workflow. Cloud Run timeout
+    is 3600s (1 hour).
 
-    Also checks for already-running workflows on the same repo and
-    drops duplicates to prevent concurrent runs.
+    ALWAYS returns HTTP 200 to prevent Pub/Sub from redelivering messages.
+    On error, the 200 response body contains error details — Pub/Sub only
+    cares about the status code, not the body.
+
+    If a workflow is already running for the same repo, the request is
+    dropped immediately (returns 200 with status "dropped").
     """
     try:
         # Parse the Pub/Sub message
         envelope = await request.json()
 
         if 'message' not in envelope:
-            raise HTTPException(
-                status_code=400, detail="Invalid Pub/Sub message format")
+            # Return 200 even for bad format — don't let Pub/Sub redeliver garbage
+            return {"status": "error", "detail": "Invalid Pub/Sub message format"}
 
         message = envelope['message']
 
         # Decode the base64-encoded data
         if 'data' not in message:
-            raise HTTPException(
-                status_code=400, detail="No data in Pub/Sub message")
+            return {"status": "error", "detail": "No data in Pub/Sub message"}
 
         data = base64.b64decode(message['data']).decode('utf-8')
         payload = json.loads(data)
@@ -227,8 +229,7 @@ async def pubsub_push_handler(request: Request):
         client_id = payload.get('clientId', 'default')
 
         if not all([workflow_id, repo, branch, commit_sha]):
-            raise HTTPException(
-                status_code=400, detail="Missing required workflow parameters")
+            return {"status": "error", "detail": "Missing required workflow parameters"}
 
         # ============================================
         # CONCURRENCY GUARD: Drop if workflow already running
@@ -236,10 +237,7 @@ async def pubsub_push_handler(request: Request):
         if is_workflow_already_running(repo):
             print(f"⏭️  Dropping duplicate — a workflow is already running for {repo}")
             print(f"   Dropped workflow ID: {workflow_id}")
-            print(f"   Returning 200 OK to prevent Pub/Sub redelivery")
             print()
-            # Return 200 so Pub/Sub considers the message acknowledged
-            # and does NOT redeliver it.
             return {
                 "status": "dropped",
                 "reason": f"Workflow already running for {repo}",
@@ -254,60 +252,46 @@ async def pubsub_push_handler(request: Request):
         print()
 
         # ============================================
-        # IMMEDIATE ACK: Spawn workflow as background task
+        # RUN WORKFLOW SYNCHRONOUSLY (blocking)
         # ============================================
-        # Return HTTP 200 immediately so Pub/Sub does not redeliver.
-        # The workflow runs as an asyncio background task.
-        print(f"🚀 Spawning workflow as background task...")
-        print(f"   Returning 200 OK to Pub/Sub immediately")
+        # This blocks the HTTP request for the entire workflow duration
+        # (10-60+ minutes). Cloud Run keeps the instance alive because
+        # the request is still in-flight. Pub/Sub may redeliver after
+        # its ack deadline (600s), but the concurrency lock above will
+        # drop any duplicates.
+        print(f"⏳ Running orchestrator synchronously (blocking)...")
+        print(f"   This may take 10-120 minutes...")
         print()
 
-        asyncio.create_task(
-            _run_workflow_background(
-                workflow_id, repo, branch, commit_sha, client_secrets
-            )
+        result = await run_orchestrator_workflow(
+            workflow_id, repo, branch, commit_sha, client_secrets
         )
 
+        print(f"✅ Orchestrator completed, returning 200 OK to Pub/Sub")
+        print()
+
         return {
-            "status": "accepted",
+            "status": "completed",
             "workflowId": workflow_id,
-            "message": "Workflow started in background"
+            "result": result
         }
 
-    except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON in Pub/Sub message: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f"❌ Error processing Pub/Sub message: {e}")
+        # ============================================
+        # ALWAYS return 200 — never let Pub/Sub redeliver
+        # ============================================
+        # The error is logged above by run_orchestrator_workflow.
+        # Returning 500 would cause Pub/Sub to redeliver the message,
+        # which is what caused the original cascading trigger disaster.
+        print(f"❌ Handler caught exception: {e}")
         traceback.print_exc()
-        # Return 200 even on unexpected errors to prevent infinite redelivery.
-        # The error is logged — we don't want Pub/Sub to keep retrying a
-        # message that will always fail.
+        print(f"⚠️  Returning 200 to prevent Pub/Sub redelivery")
+        print()
         return {
             "status": "error",
             "error": str(e),
-            "message": "Returning 200 to prevent redelivery"
+            "message": "Returning 200 to prevent Pub/Sub redelivery"
         }
-
-
-async def _run_workflow_background(
-    workflow_id: str, repo: str, branch: str, commit_sha: str, client_secrets: dict
-):
-    """
-    Background task wrapper for the orchestrator workflow.
-
-    Catches all exceptions so the background task never crashes silently.
-    """
-    try:
-        await run_orchestrator_workflow(
-            workflow_id, repo, branch, commit_sha, client_secrets
-        )
-        print(f"✅ Background workflow {workflow_id} completed")
-    except Exception as e:
-        print(f"❌ Background workflow {workflow_id} failed: {e}")
-        traceback.print_exc()
 
 
 @app.get("/health")
@@ -423,7 +407,7 @@ async def root():
         "status": "running",
         "project": PROJECT_ID,
         "endpoints": {
-            "/pubsub/push": "Pub/Sub push endpoint (async background task)",
+            "/pubsub/push": "Pub/Sub push endpoint (synchronous, always returns 200)",
             "/health": "Health check",
             "/test/firestore": "Test Firestore connectivity",
             "/test/mcp": "Test MCP server connectivity"
