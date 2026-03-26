@@ -24,7 +24,8 @@ ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY.strip(
 CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
 PROMPT_FILE = "prompts/revised_prompt.txt"
 REPO_OWNER = "kunalpanda"
-REPO_NAME = "test_banking_app"
+REPO_NAME = "space-rover-test"
+JENKINS_JOB_NAME = "space-rover-test"
 
 state = WorkflowState()
 emitter = EventEmitter()
@@ -839,7 +840,7 @@ async def run_full_test_repair_and_generation_workflow(
 
     Args:
         workflow_id: Pre-generated workflow ID from webhook (optional)
-        repo: Repository full name (e.g., "kunalpanda/test_banking_app")
+        repo: Repository full name (e.g., "kunalpanda/space-rover-test")
         branch: Branch name to work on
         commit_sha: Commit SHA from webhook
     """
@@ -892,7 +893,7 @@ async def run_full_test_repair_and_generation_workflow(
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="trigger_build",
-            params={"job_name": "test_banking_app",
+            params={"job_name": JENKINS_JOB_NAME,
                     "parameters": {"BRANCH": "main"}},
             headers=jenkins_headers
         )
@@ -904,7 +905,7 @@ async def run_full_test_repair_and_generation_workflow(
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="get_build_info",
-            params={"job_name": "test_banking_app"},
+            params={"job_name": JENKINS_JOB_NAME},
             headers=jenkins_headers
         )
 
@@ -926,7 +927,7 @@ async def run_full_test_repair_and_generation_workflow(
             name="wait_for_build_completion",
             headers=jenkins_headers,
             params={
-                "job_name": "test_banking_app",
+                "job_name": JENKINS_JOB_NAME,
                 "build_number": build_number,
                 "timeout_seconds": 600,
                 "poll_interval": 10,
@@ -947,7 +948,7 @@ async def run_full_test_repair_and_generation_workflow(
             server_url=settings.JENKINS_MCP_URL,
             method="tools/call",
             name="get_test_results",
-            params={"job_name": "test_banking_app",
+            params={"job_name": JENKINS_JOB_NAME,
                     "build_number": build_number},
             headers=jenkins_headers
         )
@@ -1003,7 +1004,7 @@ async def run_full_test_repair_and_generation_workflow(
               f"Method={settings.TARGET_METHOD_COVERAGE}%")
 
         # Fetch baseline coverage from Jenkins
-        baseline_coverage = await fetch_baseline_coverage(job_name="test_banking_app", _jenkins_headers=jenkins_headers)
+        baseline_coverage = await fetch_baseline_coverage(job_name=JENKINS_JOB_NAME, _jenkins_headers=jenkins_headers)
         if baseline_coverage:
             state.update_coverage(baseline_coverage)
             print(state.get_coverage_summary())
