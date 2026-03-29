@@ -15,3 +15,4 @@ frontend/npm-debug.log*
 frontend/pnpm-debug.log*
 frontend/.eslintcache
 temp_orchestrator.txt
+DEPLOY_LATEST.md
