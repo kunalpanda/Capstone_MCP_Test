@@ -1,0 +1,408 @@
+{
+  "exported_at": "2026-03-30T15:01:28.606248Z",
+  "project_id": "capstone-cicd-ai",
+  "event_type_summary": {
+    "iteration_start": 187,
+    "state_update": 195,
+    "tool_result": 245,
+    "claude_response": 186,
+    "tool_call": 242,
+    "productivity_analysis": 6,
+    "pr_summary": 6,
+    "workflow_start": 8,
+    "workflow_complete": 6
+  },
+  "workflow_count": 5,
+  "productivity_event_count": 6,
+  "workflows": {
+    "6b7f11353d9bc4fb": {
+      "prNumber": 1,
+      "completedAt": "2026-03-29T05:26:42.663000+00:00",
+      "branch": "main",
+      "updatedAt": "2026-03-29T05:26:42.663000+00:00",
+      "result": null,
+      "commitSha": "TEST-001",
+      "phase": "init",
+      "createdAt": "2026-03-29T05:06:15.506651+00:00",
+      "iteration": 48,
+      "status": "completed",
+      "triggeredBy": "webhook",
+      "repo": "kunalpanda/cargo-tracker-test"
+    },
+    "8a0afe43108358ec": {
+      "prNumber": 10,
+      "completedAt": "2026-03-26T20:20:37.788000+00:00",
+      "branch": "main",
+      "updatedAt": "2026-03-26T20:20:37.788000+00:00",
+      "result": null,
+      "commitSha": "clean-test-001",
+      "phase": "init",
+      "createdAt": "2026-03-26T20:13:30.713474+00:00",
+      "iteration": 27,
+      "status": "completed",
+      "triggeredBy": "webhook",
+      "repo": "kunalpanda/space-rover-test"
+    },
+    "8b9999a64d3752fd": {
+      "prNumber": 1,
+      "completedAt": "2026-03-29T04:03:20.465000+00:00",
+      "branch": "main",
+      "updatedAt": "2026-03-29T04:03:20.465000+00:00",
+      "result": null,
+      "commitSha": "TEST-001",
+      "phase": "init",
+      "createdAt": "2026-03-29T03:55:19.768749+00:00",
+      "iteration": 16,
+      "status": "completed",
+      "triggeredBy": "webhook",
+      "repo": "kunalpanda/pet-clinic-test"
+    },
+    "ac7a3ea77ce843e2": {
+      "prNumber": 1,
+      "completedAt": "2026-03-29T04:54:49.606000+00:00",
+      "branch": "main",
+      "updatedAt": "2026-03-29T04:54:49.606000+00:00",
+      "result": null,
+      "commitSha": "TEST-001",
+      "phase": "init",
+      "createdAt": "2026-03-29T04:43:59.757760+00:00",
+      "iteration": 30,
+      "status": "completed",
+      "triggeredBy": "webhook",
+      "repo": "kunalpanda/Liberty-bikes-test"
+    },
+    "f41e8fc77f31ab25": {
+      "prNumber": 1,
+      "completedAt": "2026-03-29T04:37:25.324000+00:00",
+      "branch": "main",
+      "updatedAt": "2026-03-29T04:37:25.324000+00:00",
+      "result": null,
+      "commitSha": "TEST-001",
+      "phase": "init",
+      "createdAt": "2026-03-29T04:30:26.710455+00:00",
+      "iteration": 29,
+      "status": "completed",
+      "triggeredBy": "webhook",
+      "repo": "kunalpanda/daytrader-test"
+    }
+  },
+  "productivity_events": [
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 294.0,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "coverage_analysis": 15,
+              "test_result_analysis": 20,
+              "build_status_check": 10
+            },
+            "minutes": 45
+          },
+          "build_verify_cycles": {
+            "minutes": 30,
+            "count": 1
+          },
+          "change_verification": {
+            "files_verified": 3,
+            "minutes": 15
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 30,
+            "classification": "medium"
+          },
+          "diff_inspections": {
+            "minutes": 0,
+            "count": 0
+          },
+          "root_cause_diagnosis": {
+            "minutes": 20,
+            "classification": "simple"
+          }
+        },
+        "time_saved_minutes": 229.6,
+        "total_manual_hours": 3.92,
+        "ai_resolution_minutes": 5.4,
+        "hourly_rate": 75,
+        "iteration_count": 21,
+        "total_manual_minutes": 235,
+        "files_modified": 5
+      },
+      "timestamp": "2026-03-26T20:11:58.473020",
+      "_doc_id": "wRxDskEIqZwNzc79f1XB"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 399.75,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "test_result_analysis": 20,
+              "coverage_analysis": 15,
+              "console_log_analysis": 30,
+              "build_status_check": 10
+            },
+            "minutes": 75
+          },
+          "build_verify_cycles": {
+            "minutes": 90,
+            "count": 3
+          },
+          "change_verification": {
+            "files_verified": 2,
+            "minutes": 10
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 30,
+            "classification": "medium"
+          },
+          "diff_inspections": {
+            "minutes": 0,
+            "count": 0
+          },
+          "root_cause_diagnosis": {
+            "minutes": 20,
+            "classification": "simple"
+          }
+        },
+        "time_saved_minutes": 313.4,
+        "total_manual_hours": 5.33,
+        "ai_resolution_minutes": 6.6,
+        "hourly_rate": 75,
+        "iteration_count": 27,
+        "total_manual_minutes": 320,
+        "files_modified": 5
+      },
+      "timestamp": "2026-03-26T20:20:37.618498",
+      "_doc_id": "fTNFZhoTTxuilsrJBocz"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 162.75,
+        "breakdown": {
+          "ci_triage": {
+            "components": {},
+            "minutes": 0
+          },
+          "build_verify_cycles": {
+            "minutes": 0,
+            "count": 0
+          },
+          "change_verification": {
+            "files_verified": 1,
+            "minutes": 5
+          },
+          "fix_implementation": {
+            "minutes": 60,
+            "classification": "create_new"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 45,
+            "classification": "large"
+          },
+          "diff_inspections": {
+            "minutes": 0,
+            "count": 0
+          },
+          "root_cause_diagnosis": {
+            "minutes": 0,
+            "classification": "none"
+          }
+        },
+        "time_saved_minutes": 124.3,
+        "total_manual_hours": 2.17,
+        "ai_resolution_minutes": 5.7,
+        "hourly_rate": 75,
+        "iteration_count": 16,
+        "total_manual_minutes": 130,
+        "files_modified": 6
+      },
+      "timestamp": "2026-03-29T04:03:20.330046",
+      "_doc_id": "0dAPhPUWAqZvbGMEB3FY"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 437.25,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "test_result_analysis": 20,
+              "console_log_analysis": 30,
+              "build_status_check": 10
+            },
+            "minutes": 60
+          },
+          "build_verify_cycles": {
+            "minutes": 90,
+            "count": 3
+          },
+          "change_verification": {
+            "files_verified": 3,
+            "minutes": 15
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 30,
+            "classification": "medium"
+          },
+          "diff_inspections": {
+            "minutes": 0,
+            "count": 0
+          },
+          "root_cause_diagnosis": {
+            "minutes": 60,
+            "classification": "moderate"
+          }
+        },
+        "time_saved_minutes": 343.8,
+        "total_manual_hours": 5.83,
+        "ai_resolution_minutes": 6.2,
+        "hourly_rate": 75,
+        "iteration_count": 29,
+        "total_manual_minutes": 350,
+        "files_modified": 3
+      },
+      "timestamp": "2026-03-29T04:37:25.210149",
+      "_doc_id": "qXLgJpvTkbsFOjLV2sZb"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 468.75,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "test_result_analysis": 20,
+              "coverage_analysis": 15,
+              "console_log_analysis": 30,
+              "build_status_check": 10
+            },
+            "minutes": 75
+          },
+          "build_verify_cycles": {
+            "minutes": 90,
+            "count": 3
+          },
+          "change_verification": {
+            "files_verified": 2,
+            "minutes": 10
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 45,
+            "classification": "large"
+          },
+          "diff_inspections": {
+            "minutes": 0,
+            "count": 0
+          },
+          "root_cause_diagnosis": {
+            "minutes": 60,
+            "classification": "moderate"
+          }
+        },
+        "time_saved_minutes": 364.8,
+        "total_manual_hours": 6.25,
+        "ai_resolution_minutes": 10.2,
+        "hourly_rate": 75,
+        "iteration_count": 30,
+        "total_manual_minutes": 375,
+        "files_modified": 5
+      },
+      "timestamp": "2026-03-29T04:54:49.475920",
+      "_doc_id": "E4aDj2tmEumeSpA7teuj"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 531.0,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "test_result_analysis": 20,
+              "coverage_analysis": 15,
+              "console_log_analysis": 30,
+              "build_status_check": 10
+            },
+            "minutes": 75
+          },
+          "build_verify_cycles": {
+            "minutes": 120,
+            "count": 4
+          },
+          "change_verification": {
+            "files_verified": 4,
+            "minutes": 20
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 45,
+            "classification": "large"
+          },
+          "diff_inspections": {
+            "minutes": 10,
+            "count": 1
+          },
+          "root_cause_diagnosis": {
+            "minutes": 60,
+            "classification": "moderate"
+          }
+        },
+        "time_saved_minutes": 406.1,
+        "total_manual_hours": 7.08,
+        "ai_resolution_minutes": 18.9,
+        "hourly_rate": 75,
+        "iteration_count": 48,
+        "total_manual_minutes": 425,
+        "files_modified": 6
+      },
+      "timestamp": "2026-03-29T05:26:42.541733",
+      "_doc_id": "tA9lkkjk7VkBlicAMPn3"
+    }
+  ]
+}
