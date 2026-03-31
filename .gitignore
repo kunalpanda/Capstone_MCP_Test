@@ -16,3 +16,4 @@ frontend/pnpm-debug.log*
 frontend/.eslintcache
 temp_orchestrator.txt
 DEPLOY_LATEST.md
+productivity/node_modules/
