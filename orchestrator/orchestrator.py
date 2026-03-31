@@ -21,7 +21,7 @@ from orchestrator.firestore_client import get_firestore_client, generate_workflo
 # ======================================
 ANTHROPIC_API_KEY = settings.ANTHROPIC_API_KEY.strip(
 ) if settings.ANTHROPIC_API_KEY else None
-CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
+CLAUDE_MODEL = "claude-opus-4-5-20251101"
 PROMPT_FILE = "prompts/revised_prompt.txt"
 REPO_OWNER = "kunalpanda"
 REPO_NAME = "space-rover-test"

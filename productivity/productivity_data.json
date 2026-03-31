@@ -1,19 +1,19 @@
 {
-  "exported_at": "2026-03-30T15:01:28.606248Z",
+  "exported_at": "2026-03-30T16:05:01.414819Z",
   "project_id": "capstone-cicd-ai",
   "event_type_summary": {
-    "iteration_start": 187,
-    "state_update": 195,
-    "tool_result": 245,
-    "claude_response": 186,
-    "tool_call": 242,
-    "productivity_analysis": 6,
-    "pr_summary": 6,
-    "workflow_start": 8,
-    "workflow_complete": 6
+    "iteration_start": 225,
+    "state_update": 237,
+    "tool_result": 309,
+    "claude_response": 224,
+    "tool_call": 306,
+    "productivity_analysis": 8,
+    "pr_summary": 8,
+    "workflow_start": 10,
+    "workflow_complete": 8
   },
   "workflow_count": 5,
-  "productivity_event_count": 6,
+  "productivity_event_count": 8,
   "workflows": {
     "6b7f11353d9bc4fb": {
       "prNumber": 1,
@@ -30,15 +30,15 @@
       "repo": "kunalpanda/cargo-tracker-test"
     },
     "8a0afe43108358ec": {
-      "prNumber": 10,
-      "completedAt": "2026-03-26T20:20:37.788000+00:00",
+      "prNumber": 12,
+      "completedAt": "2026-03-30T15:52:29.203000+00:00",
       "branch": "main",
-      "updatedAt": "2026-03-26T20:20:37.788000+00:00",
+      "updatedAt": "2026-03-30T15:52:29.203000+00:00",
       "result": null,
       "commitSha": "clean-test-001",
       "phase": "init",
-      "createdAt": "2026-03-26T20:13:30.713474+00:00",
-      "iteration": 27,
+      "createdAt": "2026-03-30T15:46:28.703888+00:00",
+      "iteration": 23,
       "status": "completed",
       "triggeredBy": "webhook",
       "repo": "kunalpanda/space-rover-test"
@@ -403,6 +403,112 @@
       },
       "timestamp": "2026-03-29T05:26:42.541733",
       "_doc_id": "tA9lkkjk7VkBlicAMPn3"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 356.25,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "coverage_analysis": 15,
+              "test_result_analysis": 20,
+              "build_status_check": 10
+            },
+            "minutes": 45
+          },
+          "build_verify_cycles": {
+            "minutes": 30,
+            "count": 1
+          },
+          "change_verification": {
+            "files_verified": 2,
+            "minutes": 10
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 45,
+            "classification": "large"
+          },
+          "diff_inspections": {
+            "minutes": 0,
+            "count": 0
+          },
+          "root_cause_diagnosis": {
+            "minutes": 60,
+            "classification": "moderate"
+          }
+        },
+        "time_saved_minutes": 281.3,
+        "total_manual_hours": 4.75,
+        "ai_resolution_minutes": 3.7,
+        "hourly_rate": 75,
+        "iteration_count": 15,
+        "total_manual_minutes": 285,
+        "files_modified": 4
+      },
+      "timestamp": "2026-03-30T15:44:13.336776",
+      "_doc_id": "Yhmfb5xs3yUbrsSp59l7"
+    },
+    {
+      "type": "productivity_analysis",
+      "data": {
+        "cost_saved": 375.0,
+        "breakdown": {
+          "ci_triage": {
+            "components": {
+              "coverage_analysis": 15,
+              "test_result_analysis": 20,
+              "build_status_check": 10
+            },
+            "minutes": 45
+          },
+          "build_verify_cycles": {
+            "minutes": 60,
+            "count": 2
+          },
+          "change_verification": {
+            "files_verified": 5,
+            "minutes": 25
+          },
+          "fix_implementation": {
+            "minutes": 75,
+            "classification": "both"
+          },
+          "pr_creation": {
+            "created": true,
+            "minutes": 20
+          },
+          "codebase_comprehension": {
+            "minutes": 45,
+            "classification": "large"
+          },
+          "diff_inspections": {
+            "minutes": 10,
+            "count": 1
+          },
+          "root_cause_diagnosis": {
+            "minutes": 20,
+            "classification": "simple"
+          }
+        },
+        "time_saved_minutes": 294.5,
+        "total_manual_hours": 5.0,
+        "ai_resolution_minutes": 5.5,
+        "hourly_rate": 75,
+        "iteration_count": 23,
+        "total_manual_minutes": 300,
+        "files_modified": 6
+      },
+      "timestamp": "2026-03-30T15:52:29.059432",
+      "_doc_id": "qsy2vzSOJTpADYTe2JwO"
     }
   ]
 }
