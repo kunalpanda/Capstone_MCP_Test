@@ -26,6 +26,32 @@ print("============================================================")
 print()
 
 
+def is_workflow_already_running(repo: str) -> bool:
+    """
+    Check Firestore for any workflow with status 'running' for the given repo.
+
+    Returns True if a workflow is already in progress — the caller should
+    drop the new request to prevent concurrent runs.
+    """
+    try:
+        db = firestore.Client(project=PROJECT_ID)
+        running = (
+            db.collection('workflows')
+            .where('status', '==', 'running')
+            .where('repo', '==', repo)
+            .limit(1)
+            .stream()
+        )
+        for doc in running:
+            print(f"🔒 Active workflow found: {doc.id} (repo={repo})")
+            return True
+        return False
+    except Exception as e:
+        print(f"⚠️  Error checking running workflows: {e}")
+        # Fail open — allow the workflow rather than silently dropping it
+        return False
+
+
 async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, commit_sha: str, client_secrets: dict = None):
     """
     Execute the orchestrator workflow for the given parameters.
@@ -161,36 +187,30 @@ async def pubsub_push_handler(request: Request):
     """
     Handle Pub/Sub push messages.
 
-    Runs orchestrator SYNCHRONOUSLY (blocking) - just like local version.
-    This can take 10-120 minutes. Cloud Run timeout is 3600s (1 hour).
+    Runs the workflow SYNCHRONOUSLY (blocking) to keep the Cloud Run
+    instance alive for the duration of the workflow. Cloud Run timeout
+    is 3600s (1 hour).
 
-    If workflow takes >10 minutes, Pub/Sub will redeliver, but idempotency
-    check in orchestrator will skip duplicate processing.
+    ALWAYS returns HTTP 200 to prevent Pub/Sub from redelivering messages.
+    On error, the 200 response body contains error details — Pub/Sub only
+    cares about the status code, not the body.
 
-    Pub/Sub sends messages in this format:
-    {
-        "message": {
-            "data": "base64-encoded-json",
-            "messageId": "...",
-            "publishTime": "..."
-        },
-        "subscription": "..."
-    }
+    If a workflow is already running for the same repo, the request is
+    dropped immediately (returns 200 with status "dropped").
     """
     try:
         # Parse the Pub/Sub message
         envelope = await request.json()
 
         if 'message' not in envelope:
-            raise HTTPException(
-                status_code=400, detail="Invalid Pub/Sub message format")
+            # Return 200 even for bad format — don't let Pub/Sub redeliver garbage
+            return {"status": "error", "detail": "Invalid Pub/Sub message format"}
 
         message = envelope['message']
 
         # Decode the base64-encoded data
         if 'data' not in message:
-            raise HTTPException(
-                status_code=400, detail="No data in Pub/Sub message")
+            return {"status": "error", "detail": "No data in Pub/Sub message"}
 
         data = base64.b64decode(message['data']).decode('utf-8')
         payload = json.loads(data)
@@ -209,8 +229,20 @@ async def pubsub_push_handler(request: Request):
         client_id = payload.get('clientId', 'default')
 
         if not all([workflow_id, repo, branch, commit_sha]):
-            raise HTTPException(
-                status_code=400, detail="Missing required workflow parameters")
+            return {"status": "error", "detail": "Missing required workflow parameters"}
+
+        # ============================================
+        # CONCURRENCY GUARD: Drop if workflow already running
+        # ============================================
+        if is_workflow_already_running(repo):
+            print(f"⏭️  Dropping duplicate — a workflow is already running for {repo}")
+            print(f"   Dropped workflow ID: {workflow_id}")
+            print()
+            return {
+                "status": "dropped",
+                "reason": f"Workflow already running for {repo}",
+                "workflowId": workflow_id
+            }
 
         # Fetch per-client secrets from Secret Manager
         print(f"🔑 Fetching secrets for client_id='{client_id}'...")
@@ -219,9 +251,14 @@ async def pubsub_push_handler(request: Request):
         print(f"✅ Secrets fetched for client '{client_id}'")
         print()
 
-        # Run orchestrator SYNCHRONOUSLY (blocking)
-        # Everything freezes until complete - just like local version
-        # This can take 10-120 minutes
+        # ============================================
+        # RUN WORKFLOW SYNCHRONOUSLY (blocking)
+        # ============================================
+        # This blocks the HTTP request for the entire workflow duration
+        # (10-60+ minutes). Cloud Run keeps the instance alive because
+        # the request is still in-flight. Pub/Sub may redeliver after
+        # its ack deadline (600s), but the concurrency lock above will
+        # drop any duplicates.
         print(f"⏳ Running orchestrator synchronously (blocking)...")
         print(f"   This may take 10-120 minutes...")
         print()
@@ -233,20 +270,28 @@ async def pubsub_push_handler(request: Request):
         print(f"✅ Orchestrator completed, returning 200 OK to Pub/Sub")
         print()
 
-        # Return 200 OK to acknowledge the message (after workflow completes)
         return {
             "status": "completed",
             "workflowId": workflow_id,
             "result": result
         }
 
-    except json.JSONDecodeError as e:
-        print(f"❌ Invalid JSON in Pub/Sub message: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
     except Exception as e:
-        print(f"❌ Error processing Pub/Sub message: {e}")
+        # ============================================
+        # ALWAYS return 200 — never let Pub/Sub redeliver
+        # ============================================
+        # The error is logged above by run_orchestrator_workflow.
+        # Returning 500 would cause Pub/Sub to redeliver the message,
+        # which is what caused the original cascading trigger disaster.
+        print(f"❌ Handler caught exception: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"⚠️  Returning 200 to prevent Pub/Sub redelivery")
+        print()
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": "Returning 200 to prevent Pub/Sub redelivery"
+        }
 
 
 @app.get("/health")
@@ -362,7 +407,7 @@ async def root():
         "status": "running",
         "project": PROJECT_ID,
         "endpoints": {
-            "/pubsub/push": "Pub/Sub push endpoint (synchronous)",
+            "/pubsub/push": "Pub/Sub push endpoint (synchronous, always returns 200)",
             "/health": "Health check",
             "/test/firestore": "Test Firestore connectivity",
             "/test/mcp": "Test MCP server connectivity"
