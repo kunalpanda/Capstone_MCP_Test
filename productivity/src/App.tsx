@@ -121,10 +121,6 @@ function App() {
         >
           <span className="eyebrow">Executive productivity intelligence</span>
           <h1>Agentic AI Integration Testing Dashboard</h1>
-          <p>
-            A local, pitch-ready analytics experience for showing how your agentic workflow reduces manual effort,
-            compresses resolution time, and scales productivity across multiple repositories.
-          </p>
 
           <div className="hero-actions">
             <label className="upload-button">
@@ -386,10 +382,6 @@ function App() {
           )}
         </motion.section>
       </section>
-
-      <footer className="footer-note">
-        <strong>Methodology:</strong> overall metrics use all productivity events, while repository views use nearest-workflow timestamp matching with high, medium, and unassigned confidence states. This keeps the presentation professional without overstating repository attribution.
-      </footer>
     </div>
   );
 }
