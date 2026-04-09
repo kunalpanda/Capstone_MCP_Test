@@ -1,4 +1,3 @@
-# mcp_servers/jenkins_server/tools.py
 from typing import Optional
 import asyncio
 import httpx
@@ -6,14 +5,9 @@ import httpx
 # Credentials are passed per-request via jenkins_token, jenkins_url, jenkins_user params
 # No module-level AUTH or JENKINS_URL constants
 
-# === Helper: enforce branch parameter for all builds ===
-
 
 def enforce_branch_param(parameters: dict | None) -> dict:
-    """
-    Ensures every Jenkins build has a BRANCH parameter.
-    Pulls from ACTIVE_BRANCH environment variable or defaults to 'main'.
-    """
+    """Defaults BRANCH_NAME to ACTIVE_BRANCH env var or 'main'."""
     import os
     active_branch = os.getenv("ACTIVE_BRANCH", "main")
     parameters = parameters or {}
@@ -21,16 +15,9 @@ def enforce_branch_param(parameters: dict | None) -> dict:
     return parameters
 
 
-# =========================================================
-# 1️⃣ trigger_build → Start a Jenkins job
-# =========================================================
 async def trigger_build(job_name: str, parameters: dict = None,
                         jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
-    """
-    Trigger a Jenkins job, ensuring BRANCH parameter and proper endpoint usage.
-    """
     auth = (jenkins_user, jenkins_token)
-    # ✅ Always enforce branch
     parameters = enforce_branch_param(parameters)
 
     url = f"{jenkins_url}/job/{job_name}/buildWithParameters"
@@ -44,9 +31,8 @@ async def trigger_build(job_name: str, parameters: dict = None,
         queue_url = res.headers.get("Location")
         build_number = None
 
-        # Poll the queue for assigned build number
         if queue_url:
-            for _ in range(20):  # up to ~10s
+            for _ in range(20):
                 qres = await client.get(f"{queue_url}api/json")
                 if qres.status_code == 200:
                     qdata = qres.json()
@@ -64,11 +50,7 @@ async def trigger_build(job_name: str, parameters: dict = None,
     }
 
 
-# =========================================================
-# 2️⃣ get_queue_info → Check Jenkins queue
-# =========================================================
 async def get_queue_info(jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
-    """Fetch current Jenkins queue state."""
     auth = (jenkins_user, jenkins_token)
     url = f"{jenkins_url}/queue/api/json"
     async with httpx.AsyncClient(auth=auth) as client:
@@ -78,12 +60,8 @@ async def get_queue_info(jenkins_token: str = None, jenkins_url: str = None, jen
     return {"queue_length": len(data.get("items", [])), "items": data.get("items", [])[:5]}
 
 
-# =========================================================
-# 3️⃣ get_build_info → Retrieve info for a job's last build
-# =========================================================
 async def get_build_info(job_name: str,
                          jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
-    """Get details of the latest Jenkins build for a job."""
     auth = (jenkins_user, jenkins_token)
     url = f"{jenkins_url}/job/{job_name}/lastBuild/api/json"
     async with httpx.AsyncClient(auth=auth) as client:
@@ -101,19 +79,8 @@ async def get_build_info(job_name: str,
     }
 
 
-# =========================================================
-# 4️⃣ get_console_output → Retrieve console log of a build
-# =========================================================
 def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
-    """
-    Intelligently truncate console logs to preserve the most useful information.
-
-    Strategy:
-    - Keep head (20%) for build setup, checkout info
-    - Keep tail (80%) for test results, errors, and summary
-
-    This is language-agnostic - Claude interprets the raw output.
-    """
+    """20% head (build setup/checkout) + 80% tail (test results, errors, summary)."""
     total_length = len(log)
 
     if total_length <= max_chars:
@@ -123,9 +90,8 @@ def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
             "total_length": total_length
         }
 
-    # 20% head (checkout, setup), 80% tail (test results, errors)
-    head_size = max_chars // 5      # 10k chars - setup/checkout
-    tail_size = (max_chars * 4) // 5  # 40k chars - test results, summary
+    head_size = max_chars // 5
+    tail_size = (max_chars * 4) // 5
 
     head = log[:head_size]
     tail = log[-tail_size:]
@@ -144,10 +110,6 @@ def smart_truncate_log(log: str, max_chars: int = 50000) -> dict:
 
 async def get_console_output(job_name: str, build_number: int,
                              jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
-    """
-    Fetch Jenkins console log for a specific build.
-    Returns raw log with smart truncation (50k char limit).
-    """
     auth = (jenkins_user, jenkins_token)
     url = f"{jenkins_url}/job/{job_name}/{build_number}/logText/progressiveText"
     async with httpx.AsyncClient(auth=auth) as client:
@@ -156,7 +118,6 @@ async def get_console_output(job_name: str, build_number: int,
             raise RuntimeError(
                 f"Jenkins returned {res.status_code}: {res.text}")
 
-    # Smart truncation preserving head (setup) + tail (results)
     truncation_result = smart_truncate_log(res.text, max_chars=50000)
 
     return {
@@ -169,10 +130,6 @@ async def get_console_output(job_name: str, build_number: int,
     }
 
 
-# =========================================================
-# wait_for_build_completion → Poll Jenkins until a build finishes
-# =========================================================
-
 async def wait_for_build_completion(
     job_name: str,
     build_number: int,
@@ -183,10 +140,7 @@ async def wait_for_build_completion(
     jenkins_url: str = None,
     jenkins_user: str = None,
 ):
-    """
-    Waits for a Jenkins build to complete.
-    Retries up to `max_retries` times on HTTP 404 (build not yet created).
-    """
+    """Retries on HTTP 404 (build not yet created in Jenkins)."""
     import asyncio
     import time
     auth = (jenkins_user, jenkins_token)
@@ -198,7 +152,6 @@ async def wait_for_build_completion(
         while True:
             try:
                 res = await client.get(url)
-                # Handle 404: build not yet available
                 if res.status_code == 404:
                     retries += 1
                     if retries > max_retries:
@@ -225,7 +178,6 @@ async def wait_for_build_completion(
                             f"Timed out after {timeout_seconds}s waiting for build #{build_number}")
                     continue
 
-                # Completed successfully or failed
                 result = data.get("result", "UNKNOWN")
                 duration = data.get("duration", 0)
                 elapsed = int(time.time() - start)
@@ -251,17 +203,10 @@ async def wait_for_build_completion(
                 await asyncio.sleep(poll_interval)
 
 
-# =========================================================
-# 6️⃣ get_test_results → Retrieve test results from build
-# =========================================================
 async def get_test_results(job_name: str, build_number: Optional[int] = None,
                            jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
-    """
-    Get test results from a Jenkins build.
-    If build_number is not provided, uses the last build.
-    """
+    """If build_number is omitted, uses lastBuild."""
     auth = (jenkins_user, jenkins_token)
-    # Determine build path
     if build_number:
         build_path = f"{build_number}"
     else:
@@ -272,7 +217,6 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None,
     async with httpx.AsyncClient(auth=auth) as client:
         res = await client.get(url)
 
-        # Test results might not exist if no tests ran
         if res.status_code == 404:
             return {
                 "job_name": job_name,
@@ -287,7 +231,6 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None,
 
         data = res.json()
 
-        # Parse test results
         failed_tests = []
         if data.get("failCount", 0) > 0:
             for suite in data.get("suites", []):
@@ -310,15 +253,12 @@ async def get_test_results(job_name: str, build_number: Optional[int] = None,
             "skip_count": data.get("skipCount", 0),
             "pass_count": data.get("passCount", 0),
             "duration": data.get("duration", 0),
-            "failed_tests": failed_tests[:20]  # Limit to first 20 failures
+            "failed_tests": failed_tests[:20]
         }
 
 
 async def get_coverage_report(job_name: str, build_number: int = None,
                               jenkins_token: str = None, jenkins_url: str = None, jenkins_user: str = None):
-    """
-    Retrieve test coverage metrics from Jenkins JaCoCo plugin.
-    """
     auth = (jenkins_user, jenkins_token)
     if build_number is None:
         url = f"{jenkins_url}/job/{job_name}/lastBuild/api/json"
@@ -350,9 +290,7 @@ async def get_coverage_report(job_name: str, build_number: int = None,
 
         coverage_data = coverage_res.json()
 
-        # Parse JaCoCo coverage format
         def extract_percentage(metric):
-            """Extract percentage from JaCoCo metric format."""
             if not metric:
                 return None
             total = metric.get("total", 0)
@@ -361,7 +299,6 @@ async def get_coverage_report(job_name: str, build_number: int = None,
                 return 0.0
             return round((covered / total) * 100, 2)
 
-        # Extract metrics
         line_coverage = extract_percentage(coverage_data.get("lineCoverage"))
         branch_coverage = extract_percentage(
             coverage_data.get("branchCoverage"))
@@ -386,13 +323,8 @@ async def get_coverage_report(job_name: str, build_number: int = None,
             "url": f"{jenkins_url}/job/{job_name}/{actual_build_number}/jacoco/"
         }
 
-# =========================================================
-# MCP Tool Manifest - COMPLETE DEFINITIONS WITH SCHEMAS
-# =========================================================
-
 
 async def list_tools():
-    """Enumerate available Jenkins tools with complete schemas."""
     return {
         "tools": [
             {

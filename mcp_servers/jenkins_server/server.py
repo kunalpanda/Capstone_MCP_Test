@@ -1,4 +1,3 @@
-# mcp_servers/jenkins_server/server.py
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import tools
@@ -9,12 +8,11 @@ app = FastAPI(title="Jenkins MCP Server")
 
 @app.post("/")
 async def handle_rpc(request: Request):
-    """Main JSON-RPC 2.0 endpoint"""
     payload = await request.json()
     method = payload.get("method")
     params = payload.get("params", {})
     req_id = payload.get("id")
-    # Extract client credentials from request headers, fall back to env vars
+    # Fall back to env vars if no per-request credential headers
     jenkins_token = (
         request.headers.get("X-Jenkins-Token")
         or os.getenv("JENKINS_TOKEN")
@@ -28,11 +26,9 @@ async def handle_rpc(request: Request):
         or os.getenv("JENKINS_USER")
     )
     try:
-        # 1️⃣ List available tools
         if method == "tools/list":
             result = await tools.list_tools()
 
-        # 2️⃣ Call a specific Jenkins tool
         elif method == "tools/call":
             tool_name = params.get("name")
             tool_params = params.get("params", {})

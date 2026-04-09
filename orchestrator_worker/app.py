@@ -1,4 +1,3 @@
-# orchestrator_worker/app.py
 import os
 import json
 import base64
@@ -12,7 +11,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = FastAPI(title="Orchestrator Worker")
 
-# Configuration
 PROJECT_ID = os.getenv("PROJECT_ID", "capstone-cicd-ai")
 GITHUB_MCP_URL = os.getenv("GITHUB_MCP_URL")
 JENKINS_MCP_URL = os.getenv("JENKINS_MCP_URL")
@@ -27,12 +25,7 @@ print()
 
 
 def is_workflow_already_running(repo: str) -> bool:
-    """
-    Check Firestore for any workflow with status 'running' for the given repo.
-
-    Returns True if a workflow is already in progress — the caller should
-    drop the new request to prevent concurrent runs.
-    """
+    """Returns True if a workflow is already running for this repo — caller should drop the request."""
     try:
         db = firestore.Client(project=PROJECT_ID)
         running = (
@@ -53,10 +46,7 @@ def is_workflow_already_running(repo: str) -> bool:
 
 
 async def run_orchestrator_workflow(workflow_id: str, repo: str, branch: str, commit_sha: str, client_secrets: dict = None):
-    """
-    Execute the orchestrator workflow for the given parameters.
-    Runs SYNCHRONOUSLY - blocks until complete, just like local version.
-    """
+    """Runs SYNCHRONOUSLY — blocks until the workflow completes."""
     # Initialize Firestore FIRST
     firestore_client = firestore.Client(project=PROJECT_ID)
 
@@ -296,7 +286,6 @@ async def pubsub_push_handler(request: Request):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for Cloud Run."""
     return {
         "status": "healthy",
         "service": "orchestrator-worker",
@@ -306,7 +295,6 @@ async def health_check():
 
 @app.get("/test/firestore")
 async def test_firestore():
-    """Test Firestore connectivity - for debugging."""
     try:
         firestore_client = firestore.Client(project=PROJECT_ID)
 
@@ -340,7 +328,6 @@ async def test_firestore():
 
 @app.get("/test/mcp")
 async def test_mcp():
-    """Test MCP server connectivity - for debugging."""
     import httpx
 
     github_url = GITHUB_MCP_URL
@@ -401,7 +388,6 @@ async def test_mcp():
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
     return {
         "service": "Orchestrator Worker",
         "status": "running",

@@ -3,18 +3,12 @@ import httpx
 import base64
 from config import GITHUB_API_URL
 
-# === Branch enforcement helper (add below imports) ===
-
 
 def enforce_branch(kwargs: dict) -> dict:
-    """
-    Ensures every call includes a valid 'branch' or 'ref' value.
-    Defaults to ACTIVE_BRANCH environment variable or 'main'.
-    """
+    """Defaults missing branch/ref/from_branch to ACTIVE_BRANCH env var or 'main'."""
     import os
     active_branch = os.getenv("ACTIVE_BRANCH", "main")
 
-    # Fill in missing branch/ref fields
     if "branch" in kwargs and not kwargs["branch"]:
         kwargs["branch"] = active_branch
     if "ref" in kwargs and not kwargs["ref"]:
@@ -24,9 +18,6 @@ def enforce_branch(kwargs: dict) -> dict:
     return kwargs
 
 
-# =========================================================
-# 1️⃣  list_user_repos  →  List all repos for a user/org
-# =========================================================
 async def list_user_repos(user: str, github_token: str = None):
     headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/users/{user}/repos?per_page=100"
@@ -49,9 +40,6 @@ async def list_user_repos(user: str, github_token: str = None):
         return {"user": user, "count": len(repos), "repos": repos}
 
 
-# =========================================================
-# 2️⃣  get_repo_info  →  Retrieve metadata for a repo
-# =========================================================
 async def get_repo_info(owner: str, repo: str, github_token: str = None):
     headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}"
@@ -75,9 +63,6 @@ async def get_repo_info(owner: str, repo: str, github_token: str = None):
         }
 
 
-# =========================================================
-# 3️⃣  get_pr_details  →  Title, author, status, etc.
-# =========================================================
 async def get_pr_details(owner: str, repo: str, pr_number: int, github_token: str = None):
     headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}"
@@ -91,7 +76,7 @@ async def get_pr_details(owner: str, repo: str, pr_number: int, github_token: st
         return {
             "number": pr["number"],
             "title": pr["title"],
-            "body": pr.get("body", ""),  # ← ADD THIS LINE
+            "body": pr.get("body", ""),
             "author": pr["user"]["login"],
             "state": pr["state"],
             "merged": pr["merged"],
@@ -101,10 +86,6 @@ async def get_pr_details(owner: str, repo: str, pr_number: int, github_token: st
             "updated_at": pr["updated_at"],
             "url": pr["html_url"],
         }
-
-# =========================================================
-# 4️⃣  get_pr_diff  →  Retrieve patch/diff text for a PR
-# =========================================================
 
 
 async def get_pr_diff(owner: str, repo: str, pr_number: int, github_token: str = None):
@@ -117,13 +98,9 @@ async def get_pr_diff(owner: str, repo: str, pr_number: int, github_token: str =
             raise RuntimeError(
                 f"GitHub returned {res.status_code}: {res.text}")
 
-        # truncate for LLM safety
         return {"pr_number": pr_number, "diff": res.text[:8000]}
 
 
-# =========================================================
-# 5️⃣  get_file_tree  →  Recursively list files in a branch
-# =========================================================
 async def get_file_tree(owner: str, repo: str, ref: str = "main", github_token: str = None):
     headers = {"Authorization": f"token {github_token}"}
     kwargs = enforce_branch(locals())
@@ -137,13 +114,9 @@ async def get_file_tree(owner: str, repo: str, ref: str = "main", github_token: 
         data = res.json()
         files = [f["path"]
                  for f in data.get("tree", []) if f["type"] == "blob"]
-        # cap for safety
         return {"ref": ref, "count": len(files), "files": files[:2000]}
 
 
-# =========================================================
-# 6️⃣  get_commit_diff  →  Compare two commits or branches
-# =========================================================
 async def get_commit_diff(owner: str, repo: str, base: str, head: str, github_token: str = None):
     headers = {"Authorization": f"token {github_token}"}
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/compare/{base}...{head}"
@@ -166,15 +139,8 @@ async def get_commit_diff(owner: str, repo: str, base: str, head: str, github_to
             "changed_files": changed_files,
         }
 
-# =========================================================
-# 7️⃣  get_file_content  →  Retrieve and decode file content
-# =========================================================
-
 
 async def get_file_content(owner: str, repo: str, path: str, ref: str = "main", github_token: str = None):
-    """
-    Returns the decoded source code for a given file path and branch/ref.
-    """
     headers = {"Authorization": f"token {github_token}"}
     kwargs = enforce_branch(locals())
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}?ref={ref}"
@@ -192,7 +158,6 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main", 
         else:
             content = data.get("content", "")
 
-        # For safety: truncate overly large files
         truncated = len(content) > 12000
         if truncated:
             content = content[:12000] + "\n\n# [Truncated for length]\n"
@@ -205,18 +170,10 @@ async def get_file_content(owner: str, repo: str, path: str, ref: str = "main", 
             "content": content
         }
 
-# =========================================================
-# 8️⃣  create_branch  →  Create a new branch
-# =========================================================
-
 
 async def create_branch(owner: str, repo: str, branch_name: str, from_branch: str = "main", github_token: str = None):
-    """
-    Create a new branch from an existing branch.
-    """
     headers = {"Authorization": f"token {github_token}"}
     kwargs = enforce_branch(locals())
-    # First, get the SHA of the source branch
     ref_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/ref/heads/{from_branch}"
     async with httpx.AsyncClient() as client:
         ref_res = await client.get(ref_url, headers=headers)
@@ -226,7 +183,6 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
 
         source_sha = ref_res.json()["object"]["sha"]
 
-        # Create the new branch
         create_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/git/refs"
         payload = {
             "ref": f"refs/heads/{branch_name}",
@@ -247,26 +203,17 @@ async def create_branch(owner: str, repo: str, branch_name: str, from_branch: st
         }
 
 
-# =========================================================
-# 9️⃣  create_or_update_file  →  Create or update a file
-# =========================================================
 async def create_or_update_file(owner: str, repo: str, path: str, content: str, message: str, branch: str = "main", github_token: str = None):
-    """
-    Create or update a file in the repository.
-    If the file exists, it will be updated; otherwise, it will be created.
-    """
     headers = {"Authorization": f"token {github_token}"}
     if not message.startswith('[skip ci]'):
         message = f"[skip ci] {message}"
     kwargs = enforce_branch(locals())
-    # First, try to get the existing file to get its SHA
     file_url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/contents/{path}"
     params = {"ref": branch}
 
     async with httpx.AsyncClient() as client:
         get_res = await client.get(file_url, headers=headers, params=params)
 
-        # Prepare the payload
         import base64
         encoded_content = base64.b64encode(
             content.encode("utf-8")).decode("utf-8")
@@ -277,7 +224,6 @@ async def create_or_update_file(owner: str, repo: str, path: str, content: str, 
             "branch": branch
         }
 
-        # If file exists, include its SHA for update
         if get_res.status_code == 200:
             existing_file = get_res.json()
             payload["sha"] = existing_file["sha"]
@@ -285,7 +231,6 @@ async def create_or_update_file(owner: str, repo: str, path: str, content: str, 
         else:
             operation = "created"
 
-        # Create or update the file
         put_res = await client.put(file_url, headers=headers, json=payload)
         if put_res.status_code not in (200, 201):
             raise RuntimeError(
@@ -302,18 +247,11 @@ async def create_or_update_file(owner: str, repo: str, path: str, content: str, 
         }
 
 
-# =========================================================
-# 🔟  create_pull_request  →  Create a pull request
-# =========================================================
 async def create_pull_request(owner: str, repo: str, title: str, body: str, head: str, base: str = "main", github_token: str = None):
-    """
-    Create a pull request from head branch to base branch.
-    """
     headers = {"Authorization": f"token {github_token}"}
     if not title.startswith('[Automated]'):
         title = f"[Automated] {title}"
 
-    # Add skip ci note and automation footer to body
     body = f"""[skip ci] {body}"""
 
     kwargs = enforce_branch(locals())
@@ -342,10 +280,6 @@ async def create_pull_request(owner: str, repo: str, title: str, body: str, head
             "url": pr["html_url"],
             "created_at": pr["created_at"]
         }
-
-# =========================================================
-# MCP tool list - COMPLETE DEFINITIONS WITH SCHEMAS
-# =========================================================
 
 
 async def list_tools():

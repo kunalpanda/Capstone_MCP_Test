@@ -1,4 +1,3 @@
-# webhook_handler/app.py
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import pubsub_v1
@@ -178,10 +177,6 @@ async def emergency_stop(request: Request):
         print(f"❌ Emergency stop error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ============================================================
-# CONFIG ENDPOINTS
-# ============================================================
 
 CLIENT_ID = "default"
 
