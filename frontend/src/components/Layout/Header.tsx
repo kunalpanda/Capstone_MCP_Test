@@ -1,6 +1,3 @@
-// src/components/Layout/Header.tsx
-// Professional header with status indicators, progress, and controls
-
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Wifi,

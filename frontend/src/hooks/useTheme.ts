@@ -1,6 +1,3 @@
-// src/hooks/useTheme.ts
-// Theme state management with localStorage persistence and system preference detection
-
 import { useState, useEffect, useCallback } from 'react';
 
 export type Theme = 'light' | 'dark';
@@ -14,9 +11,6 @@ interface UseThemeReturn {
 
 const THEME_STORAGE_KEY = 'orchestrator-dashboard-theme';
 
-/**
- * Get the initial theme from localStorage or system preference
- */
 const getInitialTheme = (): Theme => {
   // Check localStorage first
   if (typeof window !== 'undefined') {
@@ -35,9 +29,6 @@ const getInitialTheme = (): Theme => {
   return 'dark';
 };
 
-/**
- * Apply theme to document root
- */
 const applyTheme = (theme: Theme): void => {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-theme', theme);
@@ -53,12 +44,6 @@ const applyTheme = (theme: Theme): void => {
   }
 };
 
-/**
- * Custom hook for theme management
- * Provides theme state, toggle function, and setter
- * Persists preference to localStorage
- * Respects system preference on first load
- */
 export const useTheme = (): UseThemeReturn => {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
@@ -100,10 +85,6 @@ export const useTheme = (): UseThemeReturn => {
   };
 };
 
-/**
- * Initialize theme on app load (call once at app root)
- * This prevents flash of wrong theme on page load
- */
 export const initializeTheme = (): void => {
   const theme = getInitialTheme();
   applyTheme(theme);

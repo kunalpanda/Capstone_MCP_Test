@@ -1,6 +1,3 @@
-// src/components/Widgets/CoverageWidget.tsx
-// Displays test coverage metrics with visual charts
-
 import React from 'react';
 import {
   PieChart,

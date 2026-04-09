@@ -1,6 +1,3 @@
-// src/components/Views/DashboardView.tsx
-// Main dashboard view with draggable widgets
-
 import React from 'react';
 import {
   Activity,

@@ -1,17 +1,11 @@
-# setup_pubsub.py
-"""
-Setup Pub/Sub topics and subscriptions in emulator.
-Run this after Docker Compose starts.
-"""
+# Run this after Docker Compose starts.
 import os
 import time
 from google.cloud import pubsub_v1
 
-# Wait for emulator to be ready
 print("⏳ Waiting for Pub/Sub emulator to be ready...")
 time.sleep(5)
 
-# Configure for emulator
 os.environ['PUBSUB_EMULATOR_HOST'] = 'localhost:8085'
 project_id = 'test-project'
 

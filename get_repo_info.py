@@ -2,7 +2,6 @@ import os
 import httpx
 from dotenv import load_dotenv
 
-# Load environment variables (GITHUB_TOKEN)
 ENV_PATH = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(ENV_PATH)
 
@@ -13,7 +12,6 @@ if not GITHUB_TOKEN:
     raise ValueError("❌ Missing GITHUB_TOKEN in your .env file!")
 
 async def get_repo_info(repo_full_name: str):
-    """Fetch detailed GitHub repo info (owner/repo)."""
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     url = f"{GITHUB_API_URL}/repos/{repo_full_name}"
 

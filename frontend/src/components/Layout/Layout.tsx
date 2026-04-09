@@ -1,6 +1,3 @@
-// src/components/Layout/Layout.tsx
-// Main layout wrapper component
-
 import React, { useState, useCallback } from 'react';
 import { Sidebar, ViewMode } from './Sidebar';
 import { Header } from './Header';

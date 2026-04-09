@@ -1,4 +1,3 @@
-// Event types from backend
 export type EventType = 
   | 'workflow_start'
   | 'iteration_start'
@@ -13,14 +12,12 @@ export type EventType =
   | 'error'
   | 'log';
 
-// Base event structure
 export interface BaseEvent {
   type: EventType;
   timestamp: string;
   data: any;
 }
 
-// Specific event data types
 export interface WorkflowStartData {
   repo_owner: string;
   repo_name: string;
@@ -91,7 +88,6 @@ export interface PRSummaryData {
   created_at?: string;
 }
 
-// Alias for component compatibility
 export type PRSummary = PRSummaryData;
 
 export interface WorkflowCompleteData {
@@ -106,7 +102,6 @@ export interface WorkflowCompleteData {
   duration_seconds: number | null;
 }
 
-// Productivity analysis from post-workflow LLM classification
 export interface ProductivityBreakdownItem {
   classification?: string;
   components?: Record<string, number>;
@@ -128,7 +123,6 @@ export interface ProductivityAnalysis {
   files_modified: number;
 }
 
-// Orchestrator state
 export interface OrchestratorState {
   status: 'idle' | 'running' | 'complete' | 'error';
   currentInteraction: number;  // renamed from currentIteration

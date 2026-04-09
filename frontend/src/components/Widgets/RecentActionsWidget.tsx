@@ -1,6 +1,3 @@
-// src/components/Widgets/RecentActionsWidget.tsx
-// Displays recent tool calls and actions
-
 import React from 'react';
 import {
   Wrench,

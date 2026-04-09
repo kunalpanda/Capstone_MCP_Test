@@ -1,6 +1,3 @@
-// src/components/Views/TableView.tsx
-// Table view for events
-
 import React from 'react';
 import { EventTable } from '../EventTable';
 import { BaseEvent } from '../../services/types';

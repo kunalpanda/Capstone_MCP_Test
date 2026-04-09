@@ -1,6 +1,3 @@
-// src/components/Widgets/RepositoryWidget.tsx
-// Displays repository and branch information
-
 import React from 'react';
 import {
   GitBranch,

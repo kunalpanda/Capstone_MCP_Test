@@ -1,6 +1,3 @@
-// src/components/Widgets/ProductivityWidget.tsx
-// Displays per-workflow productivity analysis with time/cost savings breakdown
-
 import React from 'react';
 import {
   TrendingUp,

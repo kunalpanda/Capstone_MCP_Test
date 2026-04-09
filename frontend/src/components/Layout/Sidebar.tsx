@@ -1,6 +1,3 @@
-// src/components/Layout/Sidebar.tsx
-// Collapsible navigation sidebar with professional styling
-
 import React from 'react';
 import {
   LayoutDashboard,

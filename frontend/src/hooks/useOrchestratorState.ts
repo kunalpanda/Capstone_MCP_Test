@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { BaseEvent, OrchestratorState } from '../services/types';
 
-/**
- * Reduces a single event into the current state.
- *
- * Extracted as a pure function so the same logic can be used both for
- * real-time events and for replaying history on reconnect.
- */
+// Pure function so the same logic works for both real-time events and history replay on reconnect.
 function applyEvent(prev: OrchestratorState, event: BaseEvent): OrchestratorState {
   const newState = { ...prev };
 

@@ -1,6 +1,3 @@
-// src/components/Widgets/EventStreamWidget.tsx
-// Displays real-time event stream with expandable cards
-
 import React, { useEffect, useRef, useState } from 'react';
 import {
   MessageSquare,

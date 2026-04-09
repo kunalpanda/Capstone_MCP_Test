@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useOrchestratorState } from './hooks/useOrchestratorState';

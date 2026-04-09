@@ -1,6 +1,3 @@
-// src/components/Widgets/WorkflowStatusWidget.tsx
-// Displays workflow status, interaction gauge (depleting), and elapsed time
-
 import React, { useEffect, useState } from 'react';
 import {
   Activity,

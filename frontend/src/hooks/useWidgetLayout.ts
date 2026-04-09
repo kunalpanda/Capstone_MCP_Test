@@ -1,6 +1,3 @@
-// src/hooks/useWidgetLayout.ts
-// Widget layout state management with localStorage persistence
-
 import { useState, useCallback, useEffect } from 'react';
 
 export interface WidgetConfig {
@@ -33,9 +30,6 @@ const DEFAULT_LAYOUT: WidgetLayout = {
   hiddenWidgets: [],
 };
 
-/**
- * Get initial layout from localStorage or use default
- */
 const getInitialLayout = (): WidgetLayout => {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem(LAYOUT_STORAGE_KEY);
@@ -66,9 +60,6 @@ const getInitialLayout = (): WidgetLayout => {
   return DEFAULT_LAYOUT;
 };
 
-/**
- * Save layout to localStorage
- */
 const saveLayout = (layout: WidgetLayout): void => {
   if (typeof window !== 'undefined') {
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout));
@@ -86,10 +77,6 @@ interface UseWidgetLayoutReturn {
   getWidgetConfig: (widgetId: string) => WidgetConfig | undefined;
 }
 
-/**
- * Custom hook for managing widget layout
- * Provides widget ordering, visibility toggling, and persistence
- */
 export const useWidgetLayout = (): UseWidgetLayoutReturn => {
   const [layout, setLayout] = useState<WidgetLayout>(getInitialLayout);
 
@@ -103,9 +90,6 @@ export const useWidgetLayout = (): UseWidgetLayoutReturn => {
     id => !layout.hiddenWidgets.includes(id)
   );
 
-  /**
-   * Reorder widgets by moving activeId to overId's position
-   */
   const reorderWidgets = useCallback((activeId: string, overId: string) => {
     setLayout(prev => {
       const oldIndex = prev.widgets.indexOf(activeId);
@@ -126,9 +110,6 @@ export const useWidgetLayout = (): UseWidgetLayoutReturn => {
     });
   }, []);
 
-  /**
-   * Toggle widget visibility
-   */
   const toggleWidgetVisibility = useCallback((widgetId: string) => {
     setLayout(prev => {
       const isHidden = prev.hiddenWidgets.includes(widgetId);
@@ -147,9 +128,6 @@ export const useWidgetLayout = (): UseWidgetLayoutReturn => {
     });
   }, []);
 
-  /**
-   * Show a hidden widget
-   */
   const showWidget = useCallback((widgetId: string) => {
     setLayout(prev => ({
       ...prev,
@@ -157,9 +135,6 @@ export const useWidgetLayout = (): UseWidgetLayoutReturn => {
     }));
   }, []);
 
-  /**
-   * Hide a visible widget
-   */
   const hideWidget = useCallback((widgetId: string) => {
     setLayout(prev => {
       if (prev.hiddenWidgets.includes(widgetId)) {
@@ -172,16 +147,10 @@ export const useWidgetLayout = (): UseWidgetLayoutReturn => {
     });
   }, []);
 
-  /**
-   * Reset to default layout
-   */
   const resetLayout = useCallback(() => {
     setLayout(DEFAULT_LAYOUT);
   }, []);
 
-  /**
-   * Get widget configuration by ID
-   */
   const getWidgetConfig = useCallback((widgetId: string): WidgetConfig | undefined => {
     return DEFAULT_WIDGETS.find(w => w.id === widgetId);
   }, []);

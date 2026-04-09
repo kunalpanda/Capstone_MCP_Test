@@ -1,6 +1,3 @@
-// src/components/Views/LogsView.tsx
-// Dedicated view for logs, test results, and file changes
-
 import React, { useState, useMemo } from 'react';
 import {
   Terminal,
