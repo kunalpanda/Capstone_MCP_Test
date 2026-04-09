@@ -1,9 +1,3 @@
-# backend/event_schemas.py
-"""
-Event schemas and formatting for orchestrator dashboard events.
-Defines standardized event structures for consistent frontend consumption.
-"""
-
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from dataclasses import dataclass, asdict
@@ -11,7 +5,6 @@ from enum import Enum
 
 
 class EventType(str, Enum):
-    """Standardized event types."""
     ITERATION_START = "iteration_start"
     ITERATION_END = "iteration_end"
     CLAUDE_RESPONSE = "claude_response"
@@ -25,7 +18,6 @@ class EventType(str, Enum):
 
 
 class LogLevel(str, Enum):
-    """Log levels for log events."""
     DEBUG = "debug"
     INFO = "info"
     WARNING = "warning"
@@ -34,11 +26,10 @@ class LogLevel(str, Enum):
 
 @dataclass
 class IterationStartEvent:
-    """Event emitted at the start of each iteration."""
     iteration: int
     max_iterations: int
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.ITERATION_START,
@@ -53,12 +44,11 @@ class IterationStartEvent:
 
 @dataclass
 class IterationEndEvent:
-    """Event emitted at the end of each iteration."""
     iteration: int
     stop_reason: str
     duration_seconds: Optional[float] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.ITERATION_END,
@@ -73,15 +63,14 @@ class IterationEndEvent:
 
 @dataclass
 class ClaudeResponseEvent:
-    """Event emitted when Claude responds."""
     iteration: int
     stop_reason: str
     text_content: Optional[str] = None
     has_tool_use: bool = False
     tool_count: int = 0
-    message_preview: Optional[str] = None  # First 500 chars
+    message_preview: Optional[str] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.CLAUDE_RESPONSE,
@@ -101,13 +90,12 @@ class ClaudeResponseEvent:
 
 @dataclass
 class ToolCallEvent:
-    """Event emitted when a tool is called."""
     iteration: int
     tool_name: str
     tool_input: Dict[str, Any]
     tool_use_id: str
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.TOOL_CALL,
@@ -124,7 +112,6 @@ class ToolCallEvent:
 
 @dataclass
 class ToolResultEvent:
-    """Event emitted when a tool execution completes."""
     iteration: int
     tool_name: str
     tool_use_id: str
@@ -133,7 +120,7 @@ class ToolResultEvent:
     error_message: Optional[str] = None
     execution_time_ms: Optional[int] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.TOOL_RESULT,
@@ -152,7 +139,6 @@ class ToolResultEvent:
 
 @dataclass
 class StateUpdateEvent:
-    """Event emitted when workflow state changes (trimmed for UI needs)."""
     branch: Optional[str] = None
     commit_sha: Optional[str] = None
     iteration: Optional[int] = None
@@ -177,14 +163,13 @@ class StateUpdateEvent:
 
 @dataclass
 class WorkflowStartEvent:
-    """Event emitted when workflow begins."""
     repo_owner: str
     repo_name: str
     branch: str
     max_iterations: int
     workflow_type: str = "test_repair_and_generation"
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.WORKFLOW_START,
@@ -201,7 +186,6 @@ class WorkflowStartEvent:
 
 @dataclass
 class WorkflowCompleteEvent:
-    """Event emitted when workflow completes."""
     total_iterations: int
     success: bool
     reason: Optional[str] = None
@@ -210,7 +194,7 @@ class WorkflowCompleteEvent:
     files_modified: Optional[int] = None
     duration_seconds: Optional[float] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.WORKFLOW_COMPLETE,
@@ -231,14 +215,13 @@ class WorkflowCompleteEvent:
 
 @dataclass
 class ErrorEvent:
-    """Event emitted when an error occurs."""
     error_type: str
     error_message: str
     iteration: Optional[int] = None
     context: Optional[Dict[str, Any]] = None
     stack_trace: Optional[str] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.ERROR,
@@ -255,13 +238,12 @@ class ErrorEvent:
 
 @dataclass
 class LogEvent:
-    """Event for general logging messages."""
     level: LogLevel
     message: str
     iteration: Optional[int] = None
     context: Optional[Dict[str, Any]] = None
     timestamp: str = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": EventType.LOG,
@@ -275,12 +257,7 @@ class LogEvent:
         }
 
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
 def create_iteration_start(iteration: int, max_iterations: int) -> Dict[str, Any]:
-    """Create iteration start event."""
     event = IterationStartEvent(iteration=iteration, max_iterations=max_iterations)
     return event.to_dict()
 
@@ -290,19 +267,17 @@ def create_claude_response(
     stop_reason: str,
     content: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
-    """Create Claude response event from raw content."""
-    # Extract text and tool use info
     text_content = None
     has_tool_use = False
     tool_count = 0
-    
+
     for block in content:
         if block.get("type") == "text":
             text_content = block.get("text", "")
         elif block.get("type") == "tool_use":
             has_tool_use = True
             tool_count += 1
-    
+
     event = ClaudeResponseEvent(
         iteration=iteration,
         stop_reason=stop_reason,
@@ -319,7 +294,6 @@ def create_tool_call(
     tool_input: Dict[str, Any],
     tool_use_id: str
 ) -> Dict[str, Any]:
-    """Create tool call event."""
     event = ToolCallEvent(
         iteration=iteration,
         tool_name=tool_name,
@@ -338,13 +312,11 @@ def create_tool_result(
     error: Optional[str] = None,
     execution_time_ms: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Create tool result event."""
-    # Create summary of result
     result_summary = None
     if success and result:
         result_str = str(result)
         result_summary = result_str[:200] + "..." if len(result_str) > 200 else result_str
-    
+
     event = ToolResultEvent(
         iteration=iteration,
         tool_name=tool_name,
@@ -358,7 +330,6 @@ def create_tool_result(
 
 
 def create_state_update(state_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """Create state update event from state.summary()."""
     event = StateUpdateEvent(
         branch=state_dict.get("branch") or state_dict.get("active_branch"),
         commit_sha=state_dict.get("commit"),
@@ -375,7 +346,6 @@ def create_workflow_start(
     branch: str,
     max_iterations: int
 ) -> Dict[str, Any]:
-    """Create workflow start event."""
     event = WorkflowStartEvent(
         repo_owner=repo_owner,
         repo_name=repo_name,
@@ -390,7 +360,6 @@ def create_workflow_complete(
     success: bool,
     reason: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Create workflow complete event."""
     event = WorkflowCompleteEvent(
         total_iterations=total_iterations,
         success=success,
@@ -405,7 +374,6 @@ def create_error(
     iteration: Optional[int] = None,
     context: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    """Create error event."""
     event = ErrorEvent(
         error_type=error_type,
         error_message=error_message,
@@ -421,7 +389,6 @@ def create_log(
     iteration: Optional[int] = None,
     context: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    """Create log event."""
     event = LogEvent(
         level=level,
         message=message,

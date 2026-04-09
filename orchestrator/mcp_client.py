@@ -5,7 +5,6 @@ import asyncio
 
 
 async def get_gcp_identity_token(audience: str) -> str:
-    """Fetch a GCP identity token for Cloud Run service authentication."""
     metadata_url = (
         f"http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity"
         f"?audience={audience}"
@@ -31,7 +30,6 @@ async def call_mcp_tool(server_url: str, method: str, name: str = None, params: 
     if params:
         payload["params"]["params"] = params
 
-    # Fetch GCP identity token for Cloud Run auth
     try:
         token = await get_gcp_identity_token(audience=server_url)
         auth_headers = {"Authorization": f"Bearer {token}"}

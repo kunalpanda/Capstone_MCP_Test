@@ -1,9 +1,3 @@
-# backend/event_emitter.py
-"""
-Event Emitter: Publishes workflow events to Pub/Sub.
-
-Events are consumed by the Event Gateway and broadcast to dashboard clients.
-"""
 import os
 import json
 from datetime import datetime
@@ -11,14 +5,11 @@ from google.cloud import pubsub_v1
 
 
 class EventEmitter:
-    """Publishes workflow events to Pub/Sub."""
 
     def __init__(self):
-        """Initialize event emitter with Pub/Sub publisher."""
         self.project_id = os.getenv('PROJECT_ID', 'capstone-cicd-ai')
         self.topic_name = os.getenv('PUBSUB_TOPIC_EVENTS', 'workflow-events')
 
-        # Initialize Pub/Sub publisher
         if os.getenv('PUBSUB_EMULATOR_HOST'):
             print(f"🔧 Event Emitter using Pub/Sub EMULATOR")
 
@@ -29,13 +20,6 @@ class EventEmitter:
         print(f"📡 Event Emitter initialized (topic: {self.topic_name})")
 
     async def _publish(self, event_type: str, data: dict):
-        """
-        Publish event to Pub/Sub.
-
-        Args:
-            event_type: Type of event
-            data: Event data
-        """
         event_data = {
             'type': event_type,
             'timestamp': datetime.utcnow().isoformat(),
@@ -45,7 +29,7 @@ class EventEmitter:
         try:
             message_bytes = json.dumps(event_data).encode('utf-8')
             future = self.publisher.publish(self.topic_path, message_bytes)
-            future.result()  # Wait for confirmation
+            future.result()
         except Exception as e:
             print(f"Error sending event: {e}")
 

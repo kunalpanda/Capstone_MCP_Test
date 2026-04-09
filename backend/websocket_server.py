@@ -1,13 +1,3 @@
-# backend/websocket_server.py
-"""
-Event Gateway: WebSocket server for real-time dashboard updates.
-
-This service:
-1. Subscribes to Pub/Sub workflow-events topic
-2. Persists events to Firestore
-3. Broadcasts events to connected WebSocket clients
-4. Serves event history from Firestore
-"""
 import asyncio
 import json
 import os
@@ -20,9 +10,6 @@ from contextlib import asynccontextmanager
 import uvicorn
 import threading
 
-# ======================================
-# Configuration
-# ======================================
 PROJECT_ID = os.getenv('PROJECT_ID', 'capstone-cicd-ai')
 EVENTS_TOPIC = os.getenv('PUBSUB_TOPIC_EVENTS', 'workflow-events')
 EVENTS_SUBSCRIPTION = os.getenv(
@@ -33,7 +20,6 @@ print(f"   Project: {PROJECT_ID}")
 print(f"   Events Topic: {EVENTS_TOPIC}")
 print(f"   Events Subscription: {EVENTS_SUBSCRIPTION}")
 
-# Check if using emulators
 if os.getenv('PUBSUB_EMULATOR_HOST'):
     print(f"🔧 Using Pub/Sub EMULATOR: {os.getenv('PUBSUB_EMULATOR_HOST')}")
 
@@ -41,40 +27,28 @@ if os.getenv('FIRESTORE_EMULATOR_HOST'):
     print(
         f"🔧 Using Firestore EMULATOR: {os.getenv('FIRESTORE_EMULATOR_HOST')}")
 
-# Initialize clients
 subscriber = pubsub_v1.SubscriberClient()
 subscription_path = subscriber.subscription_path(
     PROJECT_ID, EVENTS_SUBSCRIPTION)
 firestore_client = firestore.Client(project=PROJECT_ID)
 
-# Reference to the main asyncio event loop — set during startup,
-# used by the Pub/Sub background thread to schedule coroutines safely.
+# Set during startup, used by the Pub/Sub background thread to schedule coroutines safely.
 _main_loop: asyncio.AbstractEventLoop = None
 
 
-# ======================================
-# Event Gateway
-# ======================================
-
 class EventGateway:
-    """Manages WebSocket connections and event broadcasting."""
 
     def __init__(self):
         self.connections: Set[WebSocket] = set()
 
     async def connect(self, websocket: WebSocket):
-        """
-        Handle new WebSocket connection.
-
-        Sends recent event history to newly connected client.
-        """
+        """Also sends recent event history to the newly connected client."""
         await websocket.accept()
         self.connections.add(websocket)
 
         print(
             f"✅ WebSocket connected. Total connections: {len(self.connections)}")
 
-        # Send recent event history to new client
         try:
             history = await self.get_event_history(limit=50)
             await websocket.send_json({
@@ -86,18 +60,11 @@ class EventGateway:
             print(f"⚠️  Failed to send history: {e}")
 
     def disconnect(self, websocket: WebSocket):
-        """Remove disconnected WebSocket."""
         self.connections.discard(websocket)
         print(
             f"❌ WebSocket disconnected. Total connections: {len(self.connections)}")
 
     async def broadcast(self, event_data: Dict[str, Any]):
-        """
-        Broadcast event to all connected clients.
-
-        Args:
-            event_data: Event data to broadcast
-        """
         if not self.connections:
             return
 
@@ -110,7 +77,6 @@ class EventGateway:
                 print(f"⚠️  Failed to send to client: {e}")
                 disconnected.add(connection)
 
-        # Clean up disconnected clients
         for connection in disconnected:
             self.connections.discard(connection)
 
@@ -118,17 +84,7 @@ class EventGateway:
             print(f"📡 Broadcast event to {len(self.connections)} client(s)")
 
     async def get_event_history(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """
-        Fetch recent events from Firestore.
-
-        Args:
-            limit: Maximum number of events to fetch
-
-        Returns:
-            List of recent events
-        """
         try:
-            # Query events ordered by timestamp (most recent first)
             events_ref = firestore_client.collection('events')
             query = events_ref.order_by(
                 'timestamp', direction=firestore.Query.DESCENDING).limit(limit)
@@ -139,7 +95,6 @@ class EventGateway:
                 event_data['id'] = doc.id
                 events.append(event_data)
 
-            # Reverse to get chronological order (oldest first)
             events.reverse()
 
             return events
@@ -149,21 +104,10 @@ class EventGateway:
             return []
 
     async def save_event_to_firestore(self, event_data: Dict[str, Any]) -> str:
-        """
-        Persist event to Firestore.
-
-        Args:
-            event_data: Event data to persist
-
-        Returns:
-            Event document ID
-        """
         try:
-            # Add timestamp if not present
             if 'timestamp' not in event_data:
                 event_data['timestamp'] = datetime.utcnow().isoformat()
 
-            # Create event document
             doc_ref = firestore_client.collection('events').document()
             doc_ref.set(event_data)
 
@@ -175,35 +119,21 @@ class EventGateway:
             raise
 
 
-# Global gateway instance
 gateway = EventGateway()
 
 
-# ======================================
-# Pub/Sub Callback (runs in background thread)
-# ======================================
-
 def pubsub_callback(message):
-    """
-    Callback for Pub/Sub messages.
-
-    Persists event to Firestore and broadcasts to WebSocket clients.
-
-    IMPORTANT: This runs in a Pub/Sub background thread, NOT on the
-    main asyncio event loop. We use asyncio.run_coroutine_threadsafe()
-    to safely schedule async work (Firestore save + WebSocket broadcast)
-    on the main loop where the WebSocket connections live.
-    """
+    """Runs in a Pub/Sub background thread, NOT the main asyncio loop.
+    Uses run_coroutine_threadsafe() to schedule Firestore save + WebSocket
+    broadcast on the main loop where the connections live."""
     global _main_loop
 
     try:
-        # Parse event data
         event_data = json.loads(message.data.decode('utf-8'))
         print(f"📥 Received event: {event_data.get('type', 'unknown')}")
 
         if _main_loop is None or _main_loop.is_closed():
             print("⚠️  Main event loop not available — saving to Firestore only")
-            # Fallback: save synchronously without broadcast
             try:
                 if 'timestamp' not in event_data:
                     event_data['timestamp'] = datetime.utcnow().isoformat()
@@ -215,13 +145,10 @@ def pubsub_callback(message):
             message.ack()
             return
 
-        # Schedule the async save + broadcast on the MAIN event loop.
-        # This avoids the "bound to a different event loop" error.
         future = asyncio.run_coroutine_threadsafe(
             _process_event(event_data), _main_loop
         )
 
-        # Wait for completion (with timeout) so we can ack/nack properly
         future.result(timeout=30)
 
         message.ack()
@@ -232,11 +159,7 @@ def pubsub_callback(message):
 
 
 async def _process_event(event_data: Dict[str, Any]):
-    """
-    Save event to Firestore and broadcast to WebSocket clients.
-
-    Runs on the main asyncio event loop (scheduled by pubsub_callback).
-    """
+    """Scheduled on the main event loop by pubsub_callback."""
     try:
         event_id = await gateway.save_event_to_firestore(event_data)
         await gateway.broadcast(event_data)
@@ -247,19 +170,14 @@ async def _process_event(event_data: Dict[str, Any]):
 
 
 def start_pubsub_subscriber():
-    """
-    Start Pub/Sub subscriber in background thread.
-    """
     try:
         print(f"\n{'='*60}")
         print(f"👂 Starting Pub/Sub subscriber...")
         print(f"   Subscription: {subscription_path}")
         print(f"{'='*60}\n")
 
-        # Configure flow control
         flow_control = pubsub_v1.types.FlowControl(max_messages=10)
 
-        # Start streaming pull
         streaming_pull_future = subscriber.subscribe(
             subscription_path,
             callback=pubsub_callback,
@@ -268,46 +186,32 @@ def start_pubsub_subscriber():
 
         print(f"✅ Event subscriber started\n")
 
-        # Block until cancelled
         streaming_pull_future.result()
 
     except Exception as e:
         print(f"❌ Subscriber error: {e}")
 
 
-# ======================================
-# Lifespan (replaces deprecated @app.on_event)
-# ======================================
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage startup and shutdown."""
     global _main_loop
 
-    # Capture the main event loop BEFORE starting the subscriber thread.
     _main_loop = asyncio.get_running_loop()
     print(f"🔄 Main event loop captured: {_main_loop}")
 
-    # Start Pub/Sub subscriber in a daemon thread
     subscriber_thread = threading.Thread(
         target=start_pubsub_subscriber, daemon=True)
     subscriber_thread.start()
     print("🚀 Background event subscriber started")
 
-    yield  # App runs here
+    yield
 
-    # Shutdown
     print("🛑 Shutting down...")
     _main_loop = None
 
 
-# ======================================
-# FastAPI App
-# ======================================
-
 app = FastAPI(title="Event Gateway", lifespan=lifespan)
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, specify your frontend domain
@@ -319,17 +223,12 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """
-    WebSocket endpoint for dashboard connections.
-    """
     await gateway.connect(websocket)
 
     try:
         while True:
-            # Keep connection alive and handle any client messages
             data = await websocket.receive_text()
 
-            # Echo back for debugging
             await websocket.send_json({
                 "type": "echo",
                 "message": f"Received: {data}"
@@ -344,7 +243,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint."""
     return {
         "status": "healthy",
         "service": "event-gateway",
@@ -354,13 +252,7 @@ def health_check():
 
 @app.get("/events/recent")
 async def get_recent_events(limit: int = 50):
-    """
-    REST endpoint to get recent events.
-
-    Args:
-        limit: Maximum number of events (default 50, max 100)
-    """
-    limit = min(limit, 100)  # Cap at 100
+    limit = min(limit, 100)
     events = await gateway.get_event_history(limit=limit)
 
     return {
@@ -371,7 +263,6 @@ async def get_recent_events(limit: int = 50):
 
 @app.get("/")
 def root():
-    """Root endpoint with service info."""
     return {
         "service": "Event Gateway",
         "version": "2.1.0",
